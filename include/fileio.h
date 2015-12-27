@@ -26,13 +26,137 @@
 #ifndef _STDEX_FILEIO_H
 #define _STDEX_FILEIO_H
 
+#include "traits_adaptors.h"
+
 #include <mutex>
+#include <memory>
+#include <system_error>
+#include <wchar.h>
+
+#include <unistd.h>
 
 namespace stdex
 {
 
 struct file
 {
+private:
+	struct io_interface;
+
+public:
+	using off_t = int_least64_t;
+	using erased_type = std::unique_ptr<io_interface>;
+
+	enum class seekdir
+	{};
+
+	enum class buffering_behavior
+	{};
+
+	struct io_result
+	{
+		io_result(bool ok, size_t n) noexcept :
+			ok_(ok), n_(n)
+		{}
+
+		explicit operator bool() const noexcept
+		{
+			return ok_;
+		}
+
+		size_t count() const noexcept
+		{
+			return n_;
+		}
+
+	private:
+		bool ok_;
+		size_t n_;
+	};
+
+private:
+	template <typename T>
+	using being_readable = decltype(std::declval<ssize_t&>() =
+	    std::declval<T&>().read((char*){}, size_t()));
+
+	template <typename T>
+	using being_writable = decltype(std::declval<ssize_t&>() =
+	    std::declval<T&>().write((char const*){}, size_t()));
+
+	template <typename T>
+	using being_seekable = decltype(std::declval<off_t&>() =
+	    std::declval<T&>().seek(off_t(), seekdir()));
+
+	template <typename T>
+	using being_closable = decltype(std::declval<int&>() =
+	    std::declval<T&>().close());
+
+	template <typename T>
+	using is_readable = detector_of<being_readable>::template call<T>;
+
+	template <typename T>
+	using is_writable = detector_of<being_writable>::template call<T>;
+
+	template <typename T>
+	using is_seekable = detector_of<being_seekable>::template call<T>;
+
+	template <typename T>
+	using is_closable = detector_of<being_closable>::template call<T>;
+
+public:
+	file() noexcept : mbs_()
+	{}
+
+	template <typename T, typename =
+	    If<either<is_readable, is_writable>::call<T>>>
+	explicit file(T&& t) :
+		file(std::make_unique<io_core<T>>(std::forward<T>(t)))
+	{}
+
+	explicit file(erased_type fp) noexcept :
+		fp_(std::move(fp)), mbs_()
+	{}
+
+	static constexpr auto fully_buffered = buffering_behavior(0);
+	static constexpr auto line_buffered = buffering_behavior(1);
+	static constexpr auto unbuffered = buffering_behavior(2);
+
+	static constexpr auto beginning = seekdir(SEEK_SET);
+	static constexpr auto current = seekdir(SEEK_CUR);
+	static constexpr auto ending = seekdir(SEEK_END);
+
+	io_result read(char* buf, size_t sz)
+	{
+		auto n = fp_->read(buf, sz);
+		return { size_t(n) == sz, size_t(n) };
+	}
+
+	io_result write(char const* buf, size_t sz)
+	{
+		auto n = fp_->write(buf, sz);
+		return { size_t(n) == sz, size_t(n) };
+	}
+
+	off_t seek(off_t offset, seekdir where)
+	{
+		auto off = fp_->seek(offset, where);
+		return off;
+	}
+
+	void close()
+	{
+		fp_->close();
+	}
+
+	void setbuf(buffering_behavior mode)
+	{
+	}
+
+	erased_type detach()
+	{
+		return std::move(fp_);
+	}
+
 	void lock() const
 	{
 		mu_.lock();
@@ -48,8 +172,105 @@ struct file
 		mu_.unlock();
 	}
 
+	~file()
+	{
+		if (try_lock())
+		{
+			lock_guard _{*this, std::adopt_lock};
+			if (fp_)
+				(void)fp_->close();
+		}
+	}
+
 private:
+	struct io_interface
+	{
+		virtual ssize_t read(char* buf, size_t n) = 0;
+		virtual ssize_t write(char const* buf, size_t n) = 0;
+		virtual off_t seek(off_t offset, seekdir where) = 0;
+		virtual int close() noexcept = 0;
+
+		virtual ~io_interface()
+		{}
+	};
+
+	template <typename T>
+	struct io_core final : io_interface
+	{
+		explicit io_core(T rep) : rep_(std::move(rep))
+		{}
+
+		ssize_t read(char* buf, size_t n) override
+		{
+			return read(buf, n, is_readable<T>());
+		}
+
+		ssize_t write(char const* buf, size_t n) override
+		{
+			return write(buf, n, is_writable<T>());
+		}
+
+		off_t seek(off_t offset, seekdir where) override
+		{
+			return seek(offset, where, is_seekable<T>());
+		}
+
+		int close() noexcept override
+		{
+			return close(is_closable<T>());
+		}
+
+	private:
+		ssize_t read(char* buf, size_t n, std::true_type)
+		{
+			return rep_.read(buf, n);
+		}
+
+		ssize_t read(char*, size_t, std::false_type)
+		{
+			return -1;
+		}
+
+		ssize_t write(char const* buf, size_t n, std::true_type)
+		{
+			return rep_.write(buf, n);
+		}
+
+		ssize_t write(char const*, size_t, std::false_type)
+		{
+			return -1;
+		}
+
+		off_t seek(off_t offset, seekdir where, std::true_type)
+		{
+			return rep_.seek(offset, where);
+		}
+
+		off_t seek(off_t offset, seekdir where, std::false_type)
+		{
+			return -1;
+		}
+
+		int close(std::true_type) noexcept
+		{
+			return rep_.close();
+		}
+
+		int close(std::false_type) noexcept
+		{
+			return 0;
+		}
+
+		T rep_;
+	};
+
+	using lock_guard = std::lock_guard<file>;
+
 	mutable std::recursive_mutex mu_;
+	erased_type fp_;
+	std::shared_ptr<char> bp_;
+	size_t blen_;
+	mbstate_t mbs_;
 };
 
 }
