@@ -37,7 +37,7 @@ TEST_CASE("is_writable")
 {
 	struct fake_writer
 	{
-		int write(char const*, unsigned int)
+		ssize_t write(char const*, size_t)
 		{
 			return 0;
 		}

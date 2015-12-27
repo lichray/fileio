@@ -76,12 +76,12 @@ public:
 
 private:
 	template <typename T>
-	using being_readable = decltype(std::declval<ssize_t&>() =
-	    std::declval<T&>().read((char*){}, size_t()));
+	using being_readable = decltype(std::declval<int&>() =
+	    std::declval<T&>().read((char*){}, int()));
 
 	template <typename T>
-	using being_writable = decltype(std::declval<ssize_t&>() =
-	    std::declval<T&>().write((char const*){}, size_t()));
+	using being_writable = decltype(std::declval<int&>() =
+	    std::declval<T&>().write((char const*){}, int()));
 
 	template <typename T>
 	using being_seekable = decltype(std::declval<off_t&>() =
@@ -185,8 +185,8 @@ public:
 private:
 	struct io_interface
 	{
-		virtual ssize_t read(char* buf, size_t n) = 0;
-		virtual ssize_t write(char const* buf, size_t n) = 0;
+		virtual int read(char* buf, int n) = 0;
+		virtual int write(char const* buf, int n) = 0;
 		virtual off_t seek(off_t offset, seekdir where) = 0;
 		virtual int close() noexcept = 0;
 
@@ -200,12 +200,12 @@ private:
 		explicit io_core(T rep) : rep_(std::move(rep))
 		{}
 
-		ssize_t read(char* buf, size_t n) override
+		int read(char* buf, int n) override
 		{
 			return read(buf, n, is_readable<T>());
 		}
 
-		ssize_t write(char const* buf, size_t n) override
+		int write(char const* buf, int n) override
 		{
 			return write(buf, n, is_writable<T>());
 		}
@@ -221,22 +221,22 @@ private:
 		}
 
 	private:
-		ssize_t read(char* buf, size_t n, std::true_type)
+		int read(char* buf, int n, std::true_type)
 		{
 			return rep_.read(buf, n);
 		}
 
-		ssize_t read(char*, size_t, std::false_type)
+		int read(char*, int, std::false_type)
 		{
 			return -1;
 		}
 
-		ssize_t write(char const* buf, size_t n, std::true_type)
+		int write(char const* buf, int n, std::true_type)
 		{
 			return rep_.write(buf, n);
 		}
 
-		ssize_t write(char const*, size_t, std::false_type)
+		int write(char const*, int, std::false_type)
 		{
 			return -1;
 		}
@@ -269,7 +269,7 @@ private:
 	mutable std::recursive_mutex mu_;
 	erased_type fp_;
 	std::shared_ptr<char> bp_;
-	size_t blen_;
+	int blen_;
 	mbstate_t mbs_;
 };
 
