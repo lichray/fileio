@@ -50,3 +50,70 @@ TEST_CASE("is_writable")
 	REQUIRE_FALSE(r);
 	REQUIRE(r.count() == 0);
 }
+
+TEST_CASE("error handling")
+{
+	struct faulty_stream
+	{
+		int read(char const*, int)
+		{
+			errno = EBUSY;
+			return -1;
+		}
+
+		int write(char const*, int)
+		{
+			errno = EPERM;
+			return -1;
+		}
+
+		int seek(int, stdex::file::seekdir)
+		{
+			errno = ENOTSUP;
+			return -1;
+		}
+
+		int close() noexcept
+		{
+			errno = EAGAIN;
+			return -1;
+		}
+	};
+
+#define REQUIRE_SYSTEM_ERROR(expr, eno)                                     \
+	do                                                                  \
+	{                                                                   \
+		Catch::ResultBuilder __catchResult(                         \
+		    "REQUIRE_SYSTEM_ERROR", CATCH_INTERNAL_LINEINFO, #expr, \
+		    Catch::ResultDisposition::Normal);                      \
+		if (__catchResult.allowThrows())                            \
+			try                                                 \
+			{                                                   \
+				(void) expr;                                \
+				__catchResult.captureResult(                \
+				    Catch::ResultWas::DidntThrowException); \
+			}                                                   \
+			catch (std::system_error& ex)                       \
+			{                                                   \
+				__catchResult.captureResult(                \
+				    Catch::ResultWas::Ok);                  \
+				REQUIRE(ex.code().value() == eno);          \
+			}                                                   \
+			catch (...)                                         \
+			{                                                   \
+				__catchResult.useActiveException(           \
+				    Catch::ResultDisposition::Normal);      \
+			}                                                   \
+		else                                                        \
+			__catchResult.captureResult(Catch::ResultWas::Ok);  \
+		INTERNAL_CATCH_REACT(__catchResult)                         \
+	} while (Catch::alwaysFalse())
+
+	stdex::file fh{faulty_stream()};
+	std::array<char, 80> buf = {};
+
+	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()), EBUSY);
+	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()), EPERM);
+	REQUIRE_SYSTEM_ERROR(fh.seek(0, stdex::file::current), ENOTSUP);
+	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
+}

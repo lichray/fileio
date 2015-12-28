@@ -37,6 +37,7 @@
 
 namespace stdex
 {
+	using std::error_code;
 
 struct file
 {
@@ -55,6 +56,10 @@ public:
 
 	struct io_result
 	{
+		io_result() noexcept :
+			ok_(), n_()
+		{}
+
 		io_result(bool ok, size_t n) noexcept :
 			ok_(ok), n_(n)
 		{}
@@ -127,25 +132,80 @@ public:
 
 	io_result read(char* buf, size_t sz)
 	{
-		auto n = fp_->read(buf, sz);
-		return { size_t(n) == sz, size_t(n) };
+		error_code ec;
+		auto r = read(buf, sz, ec);
+		if (ec) throw std::system_error(ec);
+
+		return r;
 	}
 
 	io_result write(char const* buf, size_t sz)
 	{
-		auto n = fp_->write(buf, sz);
-		return { size_t(n) == sz, size_t(n) };
+		error_code ec;
+		auto r = write(buf, sz, ec);
+		if (ec) throw std::system_error(ec);
+
+		return r;
 	}
 
 	off_t seek(off_t offset, seekdir where)
 	{
-		auto off = fp_->seek(offset, where);
+		error_code ec;
+		auto off = seek(offset, where, ec);
+		if (ec) throw std::system_error(ec);
+
 		return off;
 	}
 
 	void close()
 	{
-		fp_->close();
+		error_code ec;
+		close(ec);
+		if (ec) throw std::system_error(ec);
+	}
+
+	io_result read(char* buf, size_t sz, error_code& ec)
+	{
+		auto n = fp_->read(buf, sz);
+
+		if (n == -1)
+		{
+			ec.assign(errno, std::system_category());
+			return {};
+		}
+
+		return { size_t(n) == sz, size_t(n) };
+	}
+
+	io_result write(char const* buf, size_t sz, error_code& ec)
+	{
+		auto n = fp_->write(buf, sz);
+
+		if (n == -1)
+		{
+			ec.assign(errno, std::system_category());
+			return {};
+		}
+
+		return { size_t(n) == sz, size_t(n) };
+	}
+
+	off_t seek(off_t offset, seekdir where, error_code& ec)
+	{
+		auto off = fp_->seek(offset, where);
+
+		if (off == -1)
+			ec.assign(errno, std::system_category());
+
+		return off;
+	}
+
+	void close(error_code& ec)
+	{
+		auto r = fp_->close();
+
+		if (r == -1)
+			ec.assign(errno, std::system_category());
 	}
 
 	void setbuf(buffering_behavior mode)
