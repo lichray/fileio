@@ -114,6 +114,6 @@ TEST_CASE("error handling")
 
 	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()), EBUSY);
 	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()), EPERM);
-	REQUIRE_SYSTEM_ERROR(fh.seek(0, stdex::file::current), ENOTSUP);
+	REQUIRE_SYSTEM_ERROR(fh.rewind(), ENOTSUP);
 	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
 }

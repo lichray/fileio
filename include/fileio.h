@@ -157,6 +157,11 @@ public:
 		return off;
 	}
 
+	void rewind()
+	{
+		seek({}, beginning);
+	}
+
 	void close()
 	{
 		error_code ec;
@@ -198,6 +203,11 @@ public:
 			ec.assign(errno, std::system_category());
 
 		return off;
+	}
+
+	void rewind(error_code& ec)
+	{
+		seek({}, beginning, ec);
 	}
 
 	void close(error_code& ec)
