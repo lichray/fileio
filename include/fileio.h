@@ -45,7 +45,7 @@ private:
 
 public:
 	using off_t = int_least64_t;
-	using erased_type = std::unique_ptr<io_interface>;
+	using erasure_type = std::unique_ptr<io_interface>;
 
 	enum class seekdir
 	{};
@@ -113,7 +113,7 @@ public:
 		file(std::make_unique<io_core<T>>(std::forward<T>(t)))
 	{}
 
-	explicit file(erased_type fp) noexcept :
+	explicit file(erasure_type fp) noexcept :
 		fp_(std::move(fp)), mbs_()
 	{}
 
@@ -152,7 +152,7 @@ public:
 	{
 	}
 
-	erased_type detach()
+	erasure_type detach()
 	{
 		return std::move(fp_);
 	}
@@ -267,8 +267,8 @@ private:
 	using lock_guard = std::lock_guard<file>;
 
 	mutable std::recursive_mutex mu_;
-	erased_type fp_;
-	std::shared_ptr<char> bp_;
+	erasure_type fp_;
+	std::unique_ptr<char[]> bp_;
 	int blen_;
 	mbstate_t mbs_;
 };
