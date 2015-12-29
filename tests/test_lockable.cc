@@ -5,10 +5,12 @@
 
 #include <mutex>
 
+using stdex::file;
+
 TEST_CASE("lockable")
 {
-	stdex::file fh;
-	std::unique_lock<stdex::file> lk(fh, std::defer_lock);
+	file fh;
+	std::unique_lock<file> lk(fh, std::defer_lock);
 	bool got = lk.try_lock();
 
 	REQUIRE(got);
