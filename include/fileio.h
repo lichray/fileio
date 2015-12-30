@@ -27,5 +27,15 @@
 #define _STDEX_FILEIO_H
 
 #include "fileio/file.h"
+#include "fileio/file_stream.h"
+
+namespace stdex
+{
+
+extern file _in;
+extern file _out;
+extern file _err;
+
+}
 
 #endif

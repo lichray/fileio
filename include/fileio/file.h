@@ -33,7 +33,11 @@
 #include <system_error>
 #include <wchar.h>
 
+#if defined(WIN32)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace stdex
 {

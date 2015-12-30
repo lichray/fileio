@@ -23,13 +23,99 @@
  * SUCH DAMAGE.
  */
 
-#include <fileio.h>
+#ifndef _STDEX_FILE_STREAM_H
+#define _STDEX_FILE_STREAM_H
+
+#include "file.h"
+
+#if !defined(WIN32)
+#include <sys/param.h>
+#endif
 
 namespace stdex
 {
+#if !defined(WIN32)
+#define _read ::read
+#define _write ::write
+#define _close ::close
+#if defined(BSD)
+#define _lseeki64 ::lseek
+#else
+#define _lseeki64 ::lseek64
+#endif
+#endif
 
-file _in{file_stream(0)};
-file _out{file_stream(1)};
-file _err{file_stream(2)};
+namespace detail
+{
+
+template <typename F, typename... Args>
+inline
+auto syscall(F f, Args... args)
+{
+#if defined(BSD) || defined(WIN32)
+	return f(args...);
+#else
+	decltype(f(args...)) r;
+	do
+	{
+		r = f(args...);
+	} while (r == -1 && errno == EINTR);
+
+	return r;
+#endif
+}
+
+#if !defined(BSD) && !defined(WIN32)
+
+inline
+auto syscall(decltype(&_close) f, int fd)
+{
+	int r = f(fd);
+	if (r == -1 && errno == EINTR)
+		return 0;
+
+	return r;
+}
+
+#endif
+}
+
+struct file_stream
+{
+	using native_handle = int;
+
+	explicit file_stream(native_handle fd) : fd_(fd)
+	{}
+
+	int read(char* buf, int n)
+	{
+		return detail::syscall(_read, fd_, buf, n);
+	}
+
+	int write(char const* buf, int n)
+	{
+		return detail::syscall(_write, fd_, buf, n);
+	}
+
+	file::off_t seek(file::off_t offset, file::seekdir where)
+	{
+		return detail::syscall(_lseeki64, fd_, offset, int(where));
+	}
+
+	int close() noexcept
+	{
+		return detail::syscall(_close, fd_);
+	}
+
+private:
+	native_handle fd_;
+};
+
+#undef _read
+#undef _write
+#undef _close
+#undef _lseeki64
 
 }
+
+#endif
