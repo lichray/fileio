@@ -69,7 +69,7 @@ template <class Allocator>
 class resource_adaptor_imp : public memory_resource
 {
     typename allocator_traits<Allocator>::
-        template rebind_alloc<max_align_t>::_Base m_alloc;
+        template rebind_alloc<max_align_t> m_alloc;
 
     template <size_t Align>
     void *do_allocate(size_t bytes);
@@ -100,22 +100,11 @@ class resource_adaptor_imp : public memory_resource
 // This alias ensures that 'resource_adaptor<T>' and
 // 'resource_adaptor<U>' are always the same type, whether or not
 // 'T' and 'U' are the same type.
-#ifdef TEMPLATE_ALIASES  // template aliases not supported in g++-4.4.1
 template <class Allocator>
 using resource_adaptor = resource_adaptor_imp<
-    allocator_traits<Allocator>::rebind_alloc<char>>;
+    typename allocator_traits<Allocator>::template rebind_alloc<char>>;
 #define POLYALLOC_RESOURCE_ADAPTOR(Alloc) \
     XSTD::polyalloc::resource_adaptor<Alloc >
-#else
-template <class Allocator>
-struct resource_adaptor_mf
-{
-    typedef resource_adaptor_imp<typename
-        allocator_traits<Allocator>::template rebind_alloc<char>::_Base > type;
-};
-#define POLYALLOC_RESOURCE_ADAPTOR(Alloc) \
-    typename XSTD::polyalloc::resource_adaptor_mf<Alloc >::type
-#endif
 
 // An allocator resource that uses '::operator new' and '::operator delete' to
 // manage memory is created by adapting 'std::allocator':
