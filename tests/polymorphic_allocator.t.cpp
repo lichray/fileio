@@ -80,12 +80,6 @@ static void aSsErT(int c, const char *s, int i) {
 enum { VERBOSE_ARG_NUM = 2, VERY_VERBOSE_ARG_NUM, VERY_VERY_VERBOSE_ARG_NUM };
 
 //=============================================================================
-//                  GLOBAL HELPER FUNCTIONS FOR TESTING
-//-----------------------------------------------------------------------------
-static inline int min(int a, int b) { return a < b ? a : b; }
-    // Return the minimum of the specified 'a' and 'b' arguments.
-
-//=============================================================================
 //                  CLASSES FOR TESTING USAGE EXAMPLES
 //-----------------------------------------------------------------------------
 
@@ -183,7 +177,7 @@ void* operator new(std::size_t nbytes)
     return countedAllocate(nbytes, &newDeleteCounters);
 }
 
-void operator delete(void *p)
+void operator delete(void *p) noexcept
 {
     countedDeallocate(p, &newDeleteCounters);
 }
@@ -276,12 +270,6 @@ int func(const char* s)
 {
     return std::atoi(s);
 }
-
-struct UniqDummyType { void zzzzz(UniqDummyType, bool) { } };
-typedef void (UniqDummyType::*UniqPointerType)(UniqDummyType);
-
-typedef void (UniqDummyType::*ConvertibleToBoolType)(UniqDummyType, bool);
-const ConvertibleToBoolType ConvertibleToTrue = &UniqDummyType::zzzzz;
 
 template <typename _Tp> struct unvoid { typedef _Tp type; };
 template <> struct unvoid<void> { struct type { }; };
