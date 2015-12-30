@@ -22,8 +22,8 @@ endif()
 
 include_directories(include)
 
-file(GLOB fileio_srcs src/*.cc)
-file(GLOB tests_srcs tests/*.cc)
+file(GLOB fileio_srcs src/*.cc src/*.cpp)
+file(GLOB tests_srcs tests/*.cc tests/*.t.cpp)
 
 add_library(fileio STATIC ${fileio_srcs})
 
