@@ -100,12 +100,12 @@ class AllocCounters
 
     void allocate(std::size_t nbytes) {
         ++m_num_allocs;
-        m_bytes_allocated += nbytes;
+        m_bytes_allocated += int(nbytes);
     }
 
     void deallocate(std::size_t nbytes) {
         ++m_num_deallocs;
-        m_bytes_deallocated += nbytes;
+        m_bytes_deallocated += int(nbytes);
     }
 
     int blocks_outstanding() const { return m_num_allocs - m_num_deallocs; }
@@ -342,8 +342,13 @@ public:
 
     void assign(const char* s) {
         clear();
-        data_ = AllocTraits::allocate(alloc_, std::strlen(s) + 1);
-        std::strcpy(&*data_, s);
+        auto cap = std::strlen(s) + 1;
+        data_ = AllocTraits::allocate(alloc_, cap);
+#if defined(_MSC_VER)
+        strcpy_s(&*data_, cap, s);
+#else
+        std::strncpy(&*data_, s, cap);
+#endif
     }
 
     const char* c_str() const { return &(*data_); }

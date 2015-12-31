@@ -23,12 +23,13 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _STDEX_HOTT_H
-#define _STDEX_HOTT_H 1
+#ifndef _STDEX_TRAITS_ADAPTORS_H
+#define _STDEX_TRAITS_ADAPTORS_H
 
 #include <type_traits>
 
-namespace stdex {
+namespace stdex
+{
 
 template <template <typename> class F, template <typename> class... Fs>
 struct composed
@@ -200,7 +201,7 @@ using bool_constant = std::integral_constant<bool, V>;
 template <typename X>
 struct Not : bool_constant
 	<
-	    not X::value
+	    !X::value
 	>
 {};
 

@@ -180,9 +180,9 @@ template <> struct aligned_chunk<1> { char x; };
 template <> struct aligned_chunk<2> { short x; };
 template <> struct aligned_chunk<4> { int x; };
 template <> struct aligned_chunk<8> { long long x; };
-template <> struct aligned_chunk<16> { __attribute__((aligned(16))) char x; };
-template <> struct aligned_chunk<32> { __attribute__((aligned(32))) char x; };
-template <> struct aligned_chunk<64> { __attribute__((aligned(64))) char x; };
+template <> struct aligned_chunk<16> { alignas(16) char x; };
+template <> struct aligned_chunk<32> { alignas(32) char x; };
+template <> struct aligned_chunk<64> { alignas(64) char x; };
 
 template <typename Tp>
 struct calc_alignment
