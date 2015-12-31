@@ -14,6 +14,7 @@ atomic<polyalloc::memory_resource *>
 polyalloc::memory_resource::s_default_resource(nullptr);
 
 polyalloc::new_delete_resource *polyalloc::new_delete_resource_singleton()
+    noexcept
 {
     // TBD: I think the standard makes this exception-safe, otherwise, we need
     // to use 'call_once()' in '<mutex>'.

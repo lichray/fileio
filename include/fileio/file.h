@@ -27,6 +27,7 @@
 #define _STDEX_FILE_H
 
 #include "traits_adaptors.h"
+#include "polymorphic_allocator.h"
 
 #include <mutex>
 #include <memory>
@@ -41,16 +42,18 @@
 
 namespace stdex
 {
-	using std::error_code;
+
+namespace pmr = xstd::polyalloc;
+
+using std::error_code;
+using std::allocator_arg_t;
+using std::allocator_arg;
+using xstd::erased_type;
 
 struct file
 {
-private:
-	struct io_interface;
-
-public:
 	using off_t = int_least64_t;
-	using erasure_type = std::unique_ptr<io_interface>;
+	using allocator_type = erased_type;
 
 	enum class seekdir
 	{};
@@ -113,18 +116,31 @@ private:
 	using is_closable = detector_of<being_closable>::template call<T>;
 
 public:
-	file() noexcept : mbs_()
+	file() noexcept :
+		file(allocator_arg, nullptr)
+	{}
+
+	template <typename Alloc>
+	file(allocator_arg_t, Alloc const& alloc) noexcept :
+		mr_p_(erased_allocator(alloc)), mbs_()
 	{}
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
 	explicit file(T&& t) :
-		file(std::make_unique<io_core<T>>(std::forward<T>(t)))
+		file(allocator_arg, nullptr, std::forward<T>(t))
 	{}
 
-	explicit file(erasure_type fp) noexcept :
-		fp_(std::move(fp)), mbs_()
-	{}
+	template <typename T, typename Alloc, typename =
+	    If<either<is_readable, is_writable>::call<T>>>
+	file(allocator_arg_t, Alloc const& alloc, T&& t) :
+		file(allocator_arg, alloc)
+	{
+		pmr::polymorphic_allocator<io_core<T>> a(mr_p_);
+		auto p = a.allocate(1);
+		a.construct(p, std::forward<T>(t));
+		fp_.reset(p);
+	}
 
 	static constexpr auto fully_buffered = buffering_behavior(0);
 	static constexpr auto line_buffered = buffering_behavior(1);
@@ -226,11 +242,6 @@ public:
 	{
 	}
 
-	erasure_type detach()
-	{
-		return std::move(fp_);
-	}
-
 	void lock() const
 	{
 		mu_.lock();
@@ -251,8 +262,12 @@ public:
 		if (try_lock())
 		{
 			lock_guard _{*this, std::adopt_lock};
+
 			if (fp_)
+			{
 				(void)fp_->close();
+				fp_.release()->delete_with(mr_p_);
+			}
 		}
 	}
 
@@ -264,14 +279,20 @@ private:
 		virtual off_t seek(off_t offset, seekdir where) = 0;
 		virtual int close() noexcept = 0;
 
-		virtual ~io_interface()
-		{}
+		virtual void delete_with(pmr::memory_resource*) noexcept = 0;
 	};
 
 	template <typename T>
 	struct io_core final : io_interface
 	{
-		explicit io_core(T rep) : rep_(std::move(rep))
+		using allocator_type = pmr::polymorphic_allocator<io_core<T>>;
+
+		io_core(T const& rep, allocator_type const& a) :
+			rep_(allocator_arg, a, rep)
+		{}
+
+		io_core(T&& rep, allocator_type const& a) :
+			rep_(allocator_arg, a, std::move(rep))
 		{}
 
 		int read(char* buf, int n) override
@@ -294,10 +315,17 @@ private:
 			return close(is_closable<T>());
 		}
 
+		void delete_with(pmr::memory_resource* mr_p) noexcept override
+		{
+			pmr::polymorphic_allocator<io_core> a(mr_p);
+			a.destroy(this);
+			a.deallocate(this, 1);
+		}
+
 	private:
 		int read(char* buf, int n, std::true_type)
 		{
-			return rep_.read(buf, n);
+			return obj().read(buf, n);
 		}
 
 		int read(char*, int, std::false_type)
@@ -307,7 +335,7 @@ private:
 
 		int write(char const* buf, int n, std::true_type)
 		{
-			return rep_.write(buf, n);
+			return obj().write(buf, n);
 		}
 
 		int write(char const*, int, std::false_type)
@@ -317,7 +345,7 @@ private:
 
 		off_t seek(off_t offset, seekdir where, std::true_type)
 		{
-			return rep_.seek(offset, where);
+			return obj().seek(offset, where);
 		}
 
 		off_t seek(off_t offset, seekdir where, std::false_type)
@@ -327,7 +355,7 @@ private:
 
 		int close(std::true_type) noexcept
 		{
-			return rep_.close();
+			return obj().close();
 		}
 
 		int close(std::false_type) noexcept
@@ -335,15 +363,51 @@ private:
 			return 0;
 		}
 
-		T rep_;
+	private:
+		T& obj() noexcept
+		{
+			return rep_.value();
+		}
+
+		xstd::uses_allocator_construction_wrapper<T> rep_;
+	};
+
+	template <typename Alloc>
+	auto erased_allocator(Alloc const& a)
+	{
+		return pmr::resource_adaptor<Alloc>(a);
+	}
+
+	auto erased_allocator(std::nullptr_t) noexcept
+	{
+		return pmr::get_default_resource();
+	}
+
+	auto erased_allocator(pmr::memory_resource* p) noexcept
+	{
+		return p;
+	}
+
+	template <typename T>
+	auto erased_allocator(pmr::polymorphic_allocator<T> const& a)
+	{
+		return a.resource();
+	}
+
+	struct noop_deleter
+	{
+		template <typename T>
+		void operator()(T*)
+		{}
 	};
 
 	using lock_guard = std::lock_guard<file>;
 
 	mutable std::recursive_mutex mu_;
-	erasure_type fp_;
+	std::unique_ptr<io_interface, noop_deleter> fp_;
 	std::unique_ptr<char[]> bp_;
 	int blen_;
+	pmr::memory_resource* mr_p_;
 	mbstate_t mbs_;
 };
 

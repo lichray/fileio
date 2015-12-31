@@ -111,7 +111,7 @@ using resource_adaptor = resource_adaptor_imp<
 typedef POLYALLOC_RESOURCE_ADAPTOR(std::allocator<char>) new_delete_resource;
 
 // Return a pointer to a global instance of 'new_delete_resource'.
-new_delete_resource *new_delete_resource_singleton();
+new_delete_resource *new_delete_resource_singleton() noexcept;
 
 // Get the current default resource
 memory_resource *get_default_resource();
