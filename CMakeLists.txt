@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 2.8.11)
-cmake_policy(SET CMP0054 NEW)
 project(fileio CXX)
 enable_testing()
 
 include(CTest)
-include(CheckIncludeFileCXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY build)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY build)
