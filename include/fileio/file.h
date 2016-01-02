@@ -45,6 +45,32 @@ namespace stdex
 
 namespace pmr = xstd::polyalloc;
 
+template <typename Alloc>
+inline
+auto erased_allocator(Alloc const& a)
+{
+	return pmr::resource_adaptor<Alloc>(a);
+}
+
+inline
+auto erased_allocator(std::nullptr_t) noexcept
+{
+	return pmr::get_default_resource();
+}
+
+inline
+auto erased_allocator(pmr::memory_resource* p) noexcept
+{
+	return p;
+}
+
+template <typename T>
+inline
+auto erased_allocator(pmr::polymorphic_allocator<T> const& a)
+{
+	return a.resource();
+}
+
 using std::error_code;
 using std::allocator_arg_t;
 using std::allocator_arg;
@@ -371,28 +397,6 @@ private:
 			(void)fp_->close();
 			fp_.release()->delete_with(mr_p_);
 		}
-	}
-
-	template <typename Alloc>
-	auto erased_allocator(Alloc const& a)
-	{
-		return pmr::resource_adaptor<Alloc>(a);
-	}
-
-	auto erased_allocator(std::nullptr_t) noexcept
-	{
-		return pmr::get_default_resource();
-	}
-
-	auto erased_allocator(pmr::memory_resource* p) noexcept
-	{
-		return p;
-	}
-
-	template <typename T>
-	auto erased_allocator(pmr::polymorphic_allocator<T> const& a)
-	{
-		return a.resource();
 	}
 
 	struct noop_deleter
