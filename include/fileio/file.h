@@ -259,16 +259,8 @@ public:
 
 	~file()
 	{
-		if (try_lock())
-		{
-			lock_guard _{*this, std::adopt_lock};
-
-			if (fp_)
-			{
-				(void)fp_->close();
-				fp_.release()->delete_with(mr_p_);
-			}
-		}
+		lock_guard _{*this};
+		_destruct();
 	}
 
 private:
@@ -371,6 +363,15 @@ private:
 
 		xstd::uses_allocator_construction_wrapper<T> rep_;
 	};
+
+	void _destruct() noexcept
+	{
+		if (fp_)
+		{
+			(void)fp_->close();
+			fp_.release()->delete_with(mr_p_);
+		}
+	}
 
 	template <typename Alloc>
 	auto erased_allocator(Alloc const& a)
