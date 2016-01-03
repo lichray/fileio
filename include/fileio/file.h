@@ -45,33 +45,8 @@ namespace stdex
 
 namespace pmr = xstd::polyalloc;
 
-template <typename Alloc>
-inline
-auto erased_allocator(Alloc const& a)
-{
-	return pmr::resource_adaptor<Alloc>(a);
-}
-
-inline
-auto erased_allocator(std::nullptr_t) noexcept
-{
-	return pmr::get_default_resource();
-}
-
-inline
-auto erased_allocator(pmr::memory_resource* p) noexcept
-{
-	return p;
-}
-
-template <typename T>
-inline
-auto erased_allocator(pmr::polymorphic_allocator<T> const& a)
-{
-	return a.resource();
-}
-
 using std::error_code;
+using std::nullptr_t;
 using std::allocator_arg_t;
 using std::allocator_arg;
 using xstd::erased_type;
@@ -157,9 +132,12 @@ public:
 		file(allocator_arg, nullptr)
 	{}
 
-	template <typename Alloc>
-	file(allocator_arg_t, Alloc const& alloc) noexcept :
-		mr_p_(erased_allocator(alloc)), mbs_()
+	file(allocator_arg_t, nullptr_t) noexcept :
+		mr_p_(pmr::get_default_resource())
+	{}
+
+	file(allocator_arg_t, pmr::memory_resource* p) noexcept :
+		mr_p_(p)
 	{}
 
 	template <typename T, typename =
@@ -481,7 +459,7 @@ private:
 	std::unique_ptr<char[]> bp_;
 	int blen_;
 	pmr::memory_resource* mr_p_;
-	mbstate_t mbs_;
+	mbstate_t mbs_{};
 };
 
 }
