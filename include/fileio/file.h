@@ -130,6 +130,10 @@ private:
 	    std::declval<T&>().close());
 
 	template <typename T>
+	using being_resizable = decltype(std::declval<int&>() =
+	    std::declval<T&>().resize(off_t()));
+
+	template <typename T>
 	using is_readable = detector_of<being_readable>::template call<T>;
 
 	template <typename T>
@@ -140,6 +144,9 @@ private:
 
 	template <typename T>
 	using is_closable = detector_of<being_closable>::template call<T>;
+
+	template <typename T>
+	using is_resizable = detector_of<being_resizable>::template call<T>;
 
 public:
 	file() noexcept :
@@ -208,6 +215,27 @@ public:
 		seek({}, beginning);
 	}
 
+	off_t tell()
+	{
+		error_code ec;
+		auto off = tell(ec);
+		if (ec) throw std::system_error(ec);
+
+		return off;
+	}
+
+	void resize(off_t len)
+	{
+		error_code ec;
+		resize(len, ec);
+		if (ec) throw std::system_error(ec);
+	}
+
+	void truncate()
+	{
+		resize(tell());
+	}
+
 	void close()
 	{
 		error_code ec;
@@ -256,6 +284,30 @@ public:
 		seek({}, beginning, ec);
 	}
 
+	off_t tell(error_code& ec)
+	{
+		return seek({}, current, ec);
+	}
+
+	void resize(off_t len, error_code& ec)
+	{
+		auto r = fp_->resize(len);
+
+		if (r == -1)
+			ec.assign(errno, std::system_category());
+	}
+
+	void truncate(error_code& ec)
+	{
+		error_code ec2;
+		auto off = tell(ec2);
+
+		if (ec2)
+			ec = ec2;
+		else
+			resize(off, ec);
+	}
+
 	void close(error_code& ec)
 	{
 		auto r = fp_->close();
@@ -296,6 +348,7 @@ private:
 		virtual int write(char const* buf, int n) = 0;
 		virtual off_t seek(off_t offset, seekdir where) = 0;
 		virtual int close() noexcept = 0;
+		virtual int resize(off_t len) = 0;
 
 		virtual void delete_with(pmr::memory_resource*) noexcept = 0;
 	};
@@ -331,6 +384,11 @@ private:
 		int close() noexcept override
 		{
 			return close(is_closable<T>());
+		}
+
+		int resize(off_t len) override
+		{
+			return resize(len, is_resizable<T>());
 		}
 
 		void delete_with(pmr::memory_resource* mr_p) noexcept override
@@ -379,6 +437,16 @@ private:
 		int close(std::false_type) noexcept
 		{
 			return 0;
+		}
+
+		int resize(off_t len, std::true_type)
+		{
+			return obj().resize(len);
+		}
+
+		int resize(off_t len, std::false_type)
+		{
+			return -1;
 		}
 
 	private:

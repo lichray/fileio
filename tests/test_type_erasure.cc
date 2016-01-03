@@ -80,6 +80,12 @@ TEST_CASE("error handling")
 			errno = EAGAIN;
 			return -1;
 		}
+
+		int resize(size_t)
+		{
+			errno = ERANGE;
+			return -1;
+		}
 	};
 
 #define REQUIRE_SYSTEM_ERROR(expr, eno)                                     \
@@ -118,4 +124,12 @@ TEST_CASE("error handling")
 	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()), EPERM);
 	REQUIRE_SYSTEM_ERROR(fh.rewind(), ENOTSUP);
 	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
+	REQUIRE_SYSTEM_ERROR(fh.resize(0), ERANGE);
+	REQUIRE_SYSTEM_ERROR(fh.truncate(), ENOTSUP);
+
+	// truncate is tell + resize, stops at the first error
+	std::error_code ec(EBUSY, std::system_category());
+	fh.truncate(ec);
+
+	REQUIRE(ec.value() == ENOTSUP);
 }
