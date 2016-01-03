@@ -76,13 +76,17 @@ using std::allocator_arg_t;
 using std::allocator_arg;
 using xstd::erased_type;
 
+enum class whence
+{
+	beginning = SEEK_SET,
+	current = SEEK_CUR,
+	ending = SEEK_END,
+};
+
 struct file
 {
 	using off_t = int_least64_t;
 	using allocator_type = erased_type;
-
-	enum class seekdir
-	{};
 
 	enum class buffering_behavior
 	{};
@@ -123,7 +127,7 @@ private:
 
 	template <typename T>
 	using being_seekable = decltype(std::declval<off_t&>() =
-	    std::declval<T&>().seek(off_t(), seekdir()));
+	    std::declval<T&>().seek(off_t(), whence()));
 
 	template <typename T>
 	using being_closable = decltype(std::declval<int&>() =
@@ -179,10 +183,6 @@ public:
 	static constexpr auto line_buffered = buffering_behavior(1);
 	static constexpr auto unbuffered = buffering_behavior(2);
 
-	static constexpr auto beginning = seekdir(SEEK_SET);
-	static constexpr auto current = seekdir(SEEK_CUR);
-	static constexpr auto ending = seekdir(SEEK_END);
-
 	io_result read(char* buf, size_t sz)
 	{
 		error_code ec;
@@ -201,7 +201,7 @@ public:
 		return r;
 	}
 
-	off_t seek(off_t offset, seekdir where)
+	off_t seek(off_t offset, whence where)
 	{
 		error_code ec;
 		auto off = seek(offset, where, ec);
@@ -212,7 +212,7 @@ public:
 
 	void rewind()
 	{
-		seek({}, beginning);
+		seek({}, whence::beginning);
 	}
 
 	off_t tell()
@@ -269,7 +269,7 @@ public:
 		return { size_t(n) == sz, size_t(n) };
 	}
 
-	off_t seek(off_t offset, seekdir where, error_code& ec)
+	off_t seek(off_t offset, whence where, error_code& ec)
 	{
 		auto off = fp_->seek(offset, where);
 
@@ -281,12 +281,12 @@ public:
 
 	void rewind(error_code& ec)
 	{
-		seek({}, beginning, ec);
+		seek({}, whence::beginning, ec);
 	}
 
 	off_t tell(error_code& ec)
 	{
-		return seek({}, current, ec);
+		return seek({}, whence::current, ec);
 	}
 
 	void resize(off_t len, error_code& ec)
@@ -346,7 +346,7 @@ private:
 	{
 		virtual int read(char* buf, int n) = 0;
 		virtual int write(char const* buf, int n) = 0;
-		virtual off_t seek(off_t offset, seekdir where) = 0;
+		virtual off_t seek(off_t offset, whence where) = 0;
 		virtual int close() noexcept = 0;
 		virtual int resize(off_t len) = 0;
 
@@ -376,7 +376,7 @@ private:
 			return write(buf, n, is_writable<T>());
 		}
 
-		off_t seek(off_t offset, seekdir where) override
+		off_t seek(off_t offset, whence where) override
 		{
 			return seek(offset, where, is_seekable<T>());
 		}
@@ -419,12 +419,12 @@ private:
 			return -1;
 		}
 
-		off_t seek(off_t offset, seekdir where, std::true_type)
+		off_t seek(off_t offset, whence where, std::true_type)
 		{
 			return obj().seek(offset, where);
 		}
 
-		off_t seek(off_t offset, seekdir where, std::false_type)
+		off_t seek(off_t offset, whence where, std::false_type)
 		{
 			return -1;
 		}

@@ -99,7 +99,7 @@ struct file_stream
 		return detail::syscall(_write, fd_, buf, n);
 	}
 
-	file::off_t seek(file::off_t offset, file::seekdir where)
+	file::off_t seek(file::off_t offset, whence where)
 	{
 		return detail::syscall(_lseeki64, fd_, offset, int(where));
 	}

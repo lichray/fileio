@@ -7,6 +7,7 @@
 #include <array>
 
 using stdex::file;
+using stdex::whence;
 
 TEST_CASE("is_readable and is_seekable")
 {
@@ -17,7 +18,7 @@ TEST_CASE("is_readable and is_seekable")
 			return 0;
 		}
 
-		int seek(int x, file::seekdir)
+		int seek(int x, whence)
 		{
 			return x;
 		}
@@ -30,7 +31,7 @@ TEST_CASE("is_readable and is_seekable")
 	REQUIRE_FALSE(r);
 	REQUIRE(r.count() == 0);
 
-	auto x = fh.seek(3, file::beginning);
+	auto x = fh.seek(3, whence::beginning);
 
 	REQUIRE(x == 3);
 }
@@ -69,7 +70,7 @@ TEST_CASE("error handling")
 			return -1;
 		}
 
-		int seek(int, file::seekdir)
+		int seek(int, whence)
 		{
 			errno = ENOTSUP;
 			return -1;
