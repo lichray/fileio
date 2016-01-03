@@ -40,8 +40,10 @@ namespace stdex
 #define _close ::close
 #if defined(BSD)
 #define _lseeki64 ::lseek
+#define _chsizei64 ::ftruncate
 #else
 #define _lseeki64 ::lseek64
+#define _chsizei64 ::ftruncate64
 #endif
 #endif
 
@@ -107,6 +109,15 @@ struct file_stream
 		return detail::syscall(_close, fd_);
 	}
 
+	int resize(file::off_t len)
+	{
+#if defined(WIN32)
+		return _chsize_s(fd_, len) == 0 ? 0 : -1;
+#else
+		return detail::syscall(_chsizei64, fd_, len);
+#endif
+	}
+
 private:
 	native_handle fd_;
 };
@@ -115,6 +126,7 @@ private:
 #undef _write
 #undef _close
 #undef _lseeki64
+#undef _chsizei64
 
 }
 
