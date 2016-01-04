@@ -205,9 +205,33 @@ public:
 		fp_.reset(p);
 
 		flags_ = decltype(flags_)(flags);
-		if (bufsize != 0 && !(flags_ & line_buffered))
-			flags_ |= fully_buffered;
+		if (!is_readable<T>())
+			make_it_not(for_read);
+		if (!is_writable<T>())
+			make_it_not(for_write);
+		if (bufsize != 0 && it_is_not(line_buffered))
+			make_it(fully_buffered);
 		blen_ = bufsize;
+	}
+
+	bool readable() const noexcept
+	{
+		return it_is(for_read);
+	}
+
+	bool writable() const noexcept
+	{
+		return it_is(for_write);
+	}
+
+	bool isatty() const noexcept
+	{
+		return it_is(a_tty);
+	}
+
+	bool closed() const noexcept
+	{
+		return it_is(closed_);
 	}
 
 	io_result read(char* buf, size_t sz)
@@ -338,6 +362,7 @@ public:
 	void close(error_code& ec)
 	{
 		auto r = fp_->close();
+		make_it(closed_);
 
 		if (r == -1)
 			ec.assign(errno, std::system_category());
@@ -365,7 +390,7 @@ public:
 	}
 
 private:
-	enum flags
+	enum
 	{
 		// if neither presents, unbuffered
 		fully_buffered = 0x0001,
@@ -374,11 +399,32 @@ private:
 		for_read = int(opening::for_read),
 		for_write = int(opening::for_write),
 		append_mode = int(opening::append_mode),
-		is_a_tty = int(opening::a_tty),
+		a_tty = int(opening::a_tty),
 		// other states
 		reached_eof = 0x0100,
 		in_error = 0x0200,
+		closed_ = 0x0400,
 	};
+
+	bool it_is(int v) const
+	{
+		return flags_ & v;
+	}
+
+	bool it_is_not(int v) const
+	{
+		return !it_is(v);
+	}
+
+	void make_it(int v)
+	{
+		flags_ |= v;
+	}
+
+	void make_it_not(int v)
+	{
+		flags_ &= ~v;
+	}
 
 	struct io_interface
 	{

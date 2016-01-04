@@ -29,6 +29,8 @@ TEST_CASE("is_readable and is_seekable")
 	std::array<char, 80> buf;
 	auto r = fh.read(buf.data(), buf.size());
 
+	REQUIRE(fh.readable());
+	REQUIRE_FALSE(fh.writable());
 	REQUIRE_FALSE(r);
 	REQUIRE(r.count() == 0);
 
@@ -51,6 +53,8 @@ TEST_CASE("is_writable")
 	std::array<char, 80> const buf = {};
 	auto r = fh.write(buf.data(), buf.size());
 
+	REQUIRE(fh.writable());
+	REQUIRE_FALSE(fh.readable());
 	REQUIRE_FALSE(r);
 	REQUIRE(r.count() == 0);
 }
@@ -122,12 +126,17 @@ TEST_CASE("error handling")
 	file fh{faulty_stream(), opening::for_read | opening::for_write};
 	std::array<char, 80> buf = {};
 
+	REQUIRE(fh.readable());
+	REQUIRE(fh.writable());
+
 	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()), EBUSY);
 	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()), EPERM);
 	REQUIRE_SYSTEM_ERROR(fh.rewind(), ENOTSUP);
-	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
 	REQUIRE_SYSTEM_ERROR(fh.resize(0), ERANGE);
 	REQUIRE_SYSTEM_ERROR(fh.truncate(), ENOTSUP);
+	REQUIRE_FALSE(fh.closed());
+	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
+	REQUIRE(fh.closed());
 
 	// truncate is tell + resize, stops at the first error
 	std::error_code ec(EBUSY, std::system_category());
