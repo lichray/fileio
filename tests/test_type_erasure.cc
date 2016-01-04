@@ -8,6 +8,7 @@
 
 using stdex::file;
 using stdex::whence;
+using stdex::opening;
 
 TEST_CASE("is_readable and is_seekable")
 {
@@ -24,7 +25,7 @@ TEST_CASE("is_readable and is_seekable")
 		}
 	};
 
-	file fh{fake_reader()};
+	file fh{fake_reader(), opening::for_read | opening::for_write};
 	std::array<char, 80> buf;
 	auto r = fh.read(buf.data(), buf.size());
 
@@ -46,7 +47,7 @@ TEST_CASE("is_writable")
 		}
 	};
 
-	file fh{fake_writer()};
+	file fh{fake_writer(), opening::for_read | opening::for_write};
 	std::array<char, 80> const buf = {};
 	auto r = fh.write(buf.data(), buf.size());
 
@@ -118,7 +119,7 @@ TEST_CASE("error handling")
 		INTERNAL_CATCH_REACT(__catchResult)                         \
 	} while (Catch::alwaysFalse())
 
-	file fh{faulty_stream()};
+	file fh{faulty_stream(), opening::for_read | opening::for_write};
 	std::array<char, 80> buf = {};
 
 	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()), EBUSY);

@@ -28,8 +28,8 @@
 namespace stdex
 {
 
-file _in{file_stream(0)};
-file _out{file_stream(1)};
-file _err{file_stream(2)};
+file _in{file_stream(0), opening::for_read};
+file _out{file_stream(1), opening::for_write};
+file _err{file_stream(2), opening::for_write};
 
 }

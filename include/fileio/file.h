@@ -58,13 +58,51 @@ enum class whence
 	ending = SEEK_END,
 };
 
+enum class opening
+{
+	line_buffered = 0x0002,
+	for_read = 0x0004,
+	for_write = 0x0008,
+	append_mode = 0x0010,
+	a_tty = 0x0020,
+};
+
+template <typename Enum>
+struct _ifflags
+{
+	using int_type = std::underlying_type_t<Enum>;
+
+	_ifflags(Enum e) noexcept : v_(int_type(e))
+	{}
+
+	friend
+	_ifflags operator|(_ifflags a, _ifflags b) noexcept
+	{
+		return _ifflags(a.v_ | b.v_);
+	}
+
+	explicit operator int_type() noexcept
+	{
+		return v_;
+	}
+
+private:
+	explicit _ifflags(int_type v) noexcept : v_(v)
+	{}
+
+	int_type v_;
+};
+
+inline
+auto operator|(opening a, opening b) noexcept
+{
+	return _ifflags<opening>(a) | _ifflags<opening>(b);
+}
+
 struct file
 {
 	using off_t = int_least64_t;
 	using allocator_type = erased_type;
-
-	enum class buffering_behavior
-	{};
 
 	struct io_result
 	{
@@ -127,6 +165,8 @@ private:
 	template <typename T>
 	using is_resizable = detector_of<being_resizable>::template call<T>;
 
+	using _unspecified_ = _ifflags<opening>;
+
 public:
 	file() noexcept :
 		file(allocator_arg, nullptr)
@@ -142,24 +182,33 @@ public:
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
-	explicit file(T&& t) :
-		file(allocator_arg, nullptr, std::forward<T>(t))
+	file(T&& t, _unspecified_ flags) :
+		file(allocator_arg, nullptr, std::forward<T>(t), flags)
 	{}
 
+	template <typename T, typename =
+	    If<either<is_readable, is_writable>::call<T>>>
+	file(T&& t, _unspecified_ flags, int bufsize) :
+		file(allocator_arg, nullptr, std::forward<T>(t), flags, bufsize)
+	{}
+
+	// specify a non-zero bufsize to turn on buffering
 	template <typename T, typename Alloc, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
-	file(allocator_arg_t, Alloc const& alloc, T&& t) :
+	file(allocator_arg_t, Alloc const& alloc, T&& t, _unspecified_ flags,
+	    int bufsize = 0) :
 		file(allocator_arg, alloc)
 	{
 		pmr::polymorphic_allocator<io_core<T>> a(mr_p_);
 		auto p = a.allocate(1);
 		a.construct(p, std::forward<T>(t));
 		fp_.reset(p);
-	}
 
-	static constexpr auto fully_buffered = buffering_behavior(0);
-	static constexpr auto line_buffered = buffering_behavior(1);
-	static constexpr auto unbuffered = buffering_behavior(2);
+		flags_ = decltype(flags_)(flags);
+		if (bufsize != 0 && !(flags_ & line_buffered))
+			flags_ |= fully_buffered;
+		blen_ = bufsize;
+	}
 
 	io_result read(char* buf, size_t sz)
 	{
@@ -294,10 +343,6 @@ public:
 			ec.assign(errno, std::system_category());
 	}
 
-	void setbuf(buffering_behavior mode)
-	{
-	}
-
 	void lock() const
 	{
 		mu_.lock();
@@ -320,6 +365,21 @@ public:
 	}
 
 private:
+	enum flags
+	{
+		// if neither presents, unbuffered
+		fully_buffered = 0x0001,
+		line_buffered = int(opening::line_buffered),
+		// if both present, opened for read and write
+		for_read = int(opening::for_read),
+		for_write = int(opening::for_write),
+		append_mode = int(opening::append_mode),
+		is_a_tty = int(opening::a_tty),
+		// other states
+		reached_eof = 0x0100,
+		in_error = 0x0200,
+	};
+
 	struct io_interface
 	{
 		virtual int read(char* buf, int n) = 0;
@@ -458,8 +518,9 @@ private:
 	std::unique_ptr<io_interface, noop_deleter> fp_;
 	std::unique_ptr<char[]> bp_;
 	int blen_;
+	_ifflags<opening>::int_type flags_;
 	pmr::memory_resource* mr_p_;
-	mbstate_t mbs_{};
+	//mbstate_t mbs_{};
 };
 
 }
