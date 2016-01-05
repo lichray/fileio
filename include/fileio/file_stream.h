@@ -38,7 +38,7 @@ namespace stdex
 #define _read ::read
 #define _write ::write
 #define _close ::close
-#if defined(BSD)
+#if defined(BSD) || defined(__MSYS__)
 #define _lseeki64 ::lseek
 #define _chsizei64 ::ftruncate
 #else
@@ -54,7 +54,7 @@ template <typename F, typename... Args>
 inline
 auto syscall(F f, Args... args)
 {
-#if defined(BSD) || defined(WIN32)
+#if defined(BSD) || defined(__MSYS__) || defined(WIN32)
 	return f(args...);
 #else
 	decltype(f(args...)) r;
@@ -67,7 +67,7 @@ auto syscall(F f, Args... args)
 #endif
 }
 
-#if !defined(BSD) && !defined(WIN32)
+#if !(defined(BSD) || defined(__MSYS__) || defined(WIN32))
 
 inline
 auto syscall(decltype(&_close) f, int fd)
