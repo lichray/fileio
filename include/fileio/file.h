@@ -32,7 +32,7 @@
 #include <mutex>
 #include <memory>
 #include <system_error>
-#include <wchar.h>
+#include <locale>
 
 #if defined(WIN32)
 #include <io.h>
