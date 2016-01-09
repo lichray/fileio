@@ -30,6 +30,9 @@
 
 #if !defined(WIN32)
 #include <sys/param.h>
+#include <unistd.h>
+#else
+#include <io.h>
 #endif
 
 namespace stdex

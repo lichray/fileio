@@ -28,17 +28,12 @@
 
 #include "traits_adaptors.h"
 #include "polymorphic_allocator.h"
+#include "lock_guard.h"
 
-#include <mutex>
 #include <memory>
 #include <system_error>
 #include <locale>
-
-#if defined(WIN32)
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
+#include <stdio.h>
 
 namespace stdex
 {
@@ -368,24 +363,9 @@ public:
 			ec.assign(errno, std::system_category());
 	}
 
-	void lock() const
-	{
-		mu_.lock();
-	}
-
-	bool try_lock() const
-	{
-		return mu_.try_lock();
-	}
-
-	void unlock() const
-	{
-		mu_.unlock();
-	}
-
 	~file()
 	{
-		lock_guard _{*this};
+		auto _ = make_guard();
 		_destruct();
 	}
 
@@ -558,9 +538,33 @@ private:
 		{}
 	};
 
-	using lock_guard = std::lock_guard<file>;
+	void lock() const
+	{
+#if defined(WIN32)
+		_lock_file(locktgt_);
+#else
+		::flockfile(locktgt_);
+#endif
+	}
 
-	mutable std::recursive_mutex mu_;
+	void unlock() const
+	{
+#if defined(WIN32)
+		_unlock_file(locktgt_);
+#else
+		::funlockfile(locktgt_);
+#endif
+	}
+
+	using lock_guard = conditional_lock_guard<file>;
+	friend lock_guard;
+
+	lock_guard make_guard()
+	{
+		return { locktgt_ != nullptr, *this };
+	}
+
+	FILE* locktgt_{};
 	std::unique_ptr<io_interface, noop_deleter> fp_;
 	std::unique_ptr<char[]> bp_;
 	int blen_;
