@@ -1,0 +1,12 @@
+%rename cpp msvcrXX_cpp
+
+%rename cc1plus msvcrXX_cc1plus
+
+*cpp:
+%(msvcrXX_cpp) -D__MSVCRT_VERSION__=0x1100
+
+*cc1plus:
+%(msvcrXX_cc1plus) -D__MSVCRT_VERSION__=0x1100
+
+*libgcc:
+%{mthreads:-lmingwthrd} -lmingw32 %{shared-libgcc:-lgcc_s} -lgcc -lmingwex -lmsvcr110

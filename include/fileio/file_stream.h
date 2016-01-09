@@ -28,7 +28,7 @@
 
 #include "file.h"
 
-#if !defined(WIN32)
+#if !defined(_WIN32)
 #include <sys/param.h>
 #include <unistd.h>
 #else
@@ -37,7 +37,7 @@
 
 namespace stdex
 {
-#if !defined(WIN32)
+#if !defined(_WIN32)
 #define _read ::read
 #define _write ::write
 #define _close ::close
@@ -57,7 +57,7 @@ template <typename F, typename... Args>
 inline
 auto syscall(F f, Args... args)
 {
-#if defined(BSD) || defined(__MSYS__) || defined(WIN32)
+#if defined(BSD) || defined(__MSYS__) || defined(_WIN32)
 	return f(args...);
 #else
 	decltype(f(args...)) r;
@@ -70,7 +70,7 @@ auto syscall(F f, Args... args)
 #endif
 }
 
-#if !(defined(BSD) || defined(__MSYS__) || defined(WIN32))
+#if !(defined(BSD) || defined(__MSYS__) || defined(_WIN32))
 
 inline
 auto syscall(decltype(&_close) f, int fd)
@@ -114,7 +114,7 @@ struct file_stream
 
 	int resize(file::off_t len)
 	{
-#if defined(WIN32)
+#if defined(_WIN32)
 		return _chsize_s(fd_, len) == 0 ? 0 : -1;
 #else
 		return detail::syscall(_chsizei64, fd_, len);

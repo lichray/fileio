@@ -13,6 +13,12 @@ if(NOT MSYS)
 	set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
+if(MINGW)
+	add_definitions(-DMINGW_HAS_SECURE_API)
+	set(_spec "${CMAKE_SOURCE_DIR}/tools/specs.msvcr110")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -specs=${_spec}")
+endif()
+
 if(NOT MSVC)
 	add_definitions(-Wall)
 else()

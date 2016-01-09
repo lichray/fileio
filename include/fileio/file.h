@@ -540,7 +540,7 @@ private:
 
 	void lock() const
 	{
-#if defined(WIN32)
+#if defined(_WIN32)
 		_lock_file(locktgt_);
 #else
 		::flockfile(locktgt_);
@@ -549,7 +549,7 @@ private:
 
 	void unlock() const
 	{
-#if defined(WIN32)
+#if defined(_WIN32)
 		_unlock_file(locktgt_);
 #else
 		::funlockfile(locktgt_);
