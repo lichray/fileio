@@ -49,6 +49,10 @@ namespace stdex
 #define _unlock_file ::funlockfile
 #endif
 
+#if defined(fileno)
+#error fix your libc by guarding the `fileno` macro against __cplusplus
+#endif
+
 namespace pmr = xstd::polyalloc;
 
 using std::error_code;
