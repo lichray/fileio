@@ -39,7 +39,7 @@ TEST_CASE("is_readable and is_seekable")
 	REQUIRE(x == 3);
 }
 
-TEST_CASE("is_writable")
+TEST_CASE("is_writable and fileno")
 {
 	struct fake_writer
 	{
@@ -57,6 +57,9 @@ TEST_CASE("is_writable")
 	REQUIRE_FALSE(fh.readable());
 	REQUIRE_FALSE(r);
 	REQUIRE(r.count() == 0);
+
+	REQUIRE(fh.fileno() == -1);
+	REQUIRE_FALSE(fh.isatty());
 }
 
 TEST_CASE("error handling")

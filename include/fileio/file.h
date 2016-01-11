@@ -35,8 +35,17 @@
 #include <locale>
 #include <stdio.h>
 
+#if !defined(_WIN32)
+#include <unistd.h>
+#else
+#include <io.h>
+#endif
+
 namespace stdex
 {
+#if !defined(_WIN32)
+#define _isatty ::isatty
+#endif
 
 namespace pmr = xstd::polyalloc;
 
@@ -59,7 +68,6 @@ enum class opening
 	for_read = 0x0004,
 	for_write = 0x0008,
 	append_mode = 0x0010,
-	a_tty = 0x0020,
 };
 
 template <typename Enum>
@@ -194,6 +202,10 @@ public:
 	    int bufsize = 0) :
 		file(allocator_arg, alloc)
 	{
+		static_assert(std::is_same<decltype(get_fd(t)), int>(),
+		    "fd() must return int if presents");
+		fd_copy_ = get_fd(t);
+
 		pmr::polymorphic_allocator<io_core<T>> a(mr_p_);
 		auto p = a.allocate(1);
 		a.construct(p, std::forward<T>(t));
@@ -219,9 +231,14 @@ public:
 		return it_is(for_write);
 	}
 
-	bool isatty() const noexcept
+	bool isatty() const
 	{
-		return it_is(a_tty);
+		return fileno() != -1 && _isatty(fileno());
+	}
+
+	int fileno() const
+	{
+		return fd_copy_;
 	}
 
 	bool closed() const noexcept
@@ -379,7 +396,6 @@ private:
 		for_read = int(opening::for_read),
 		for_write = int(opening::for_write),
 		append_mode = int(opening::append_mode),
-		a_tty = int(opening::a_tty),
 		// other states
 		reached_eof = 0x0100,
 		in_error = 0x0200,
@@ -522,6 +538,17 @@ private:
 		xstd::uses_allocator_construction_wrapper<T> rep_;
 	};
 
+	template <typename T>
+	static auto get_fd(T const& t) -> decltype(t.fd())
+	{
+		return t.fd();
+	}
+
+	static int get_fd(...)
+	{
+		return -1;
+	}
+
 	void _destruct() noexcept
 	{
 		if (fp_)
@@ -569,10 +596,12 @@ private:
 	std::unique_ptr<char[]> bp_;
 	int blen_;
 	_ifflags<opening>::int_type flags_;
+	int fd_copy_;
 	pmr::memory_resource* mr_p_;
 	//mbstate_t mbs_{};
 };
 
+#undef _isatty
 }
 
 #endif

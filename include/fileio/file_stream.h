@@ -121,6 +121,12 @@ struct file_stream
 #endif
 	}
 
+	// optional if native_handle != int
+	int fd() const noexcept
+	{
+		return fd_;
+	}
+
 private:
 	native_handle fd_;
 };
