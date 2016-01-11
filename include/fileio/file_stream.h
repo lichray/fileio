@@ -136,7 +136,6 @@ private:
 #undef _close
 #undef _lseeki64
 #undef _chsizei64
-
 }
 
 #endif

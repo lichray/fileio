@@ -45,6 +45,8 @@ namespace stdex
 {
 #if !defined(_WIN32)
 #define _isatty ::isatty
+#define _lock_file ::flockfile
+#define _unlock_file ::funlockfile
 #endif
 
 namespace pmr = xstd::polyalloc;
@@ -567,20 +569,12 @@ private:
 
 	void lock() const
 	{
-#if defined(_WIN32)
 		_lock_file(locktgt_);
-#else
-		::flockfile(locktgt_);
-#endif
 	}
 
 	void unlock() const
 	{
-#if defined(_WIN32)
 		_unlock_file(locktgt_);
-#else
-		::funlockfile(locktgt_);
-#endif
 	}
 
 	using lock_guard = conditional_lock_guard<file>;
@@ -602,6 +596,8 @@ private:
 };
 
 #undef _isatty
+#undef _lock_file
+#undef _unlock_file
 }
 
 #endif
