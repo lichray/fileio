@@ -70,7 +70,9 @@ enum class whence
 
 enum class opening
 {
+	fully_buffered = 0x0001,
 	line_buffered = 0x0002,
+	buffered = fully_buffered | line_buffered,
 	for_read = 0x0004,
 	for_write = 0x0008,
 	append_mode = 0x0010,
@@ -201,7 +203,6 @@ public:
 		file(allocator_arg, nullptr, std::forward<T>(t), flags, bufsize)
 	{}
 
-	// specify a non-zero bufsize to turn on buffering
 	template <typename T, typename Alloc, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
 	file(allocator_arg_t, Alloc const& alloc, T&& t, _unspecified_ flags,
@@ -222,8 +223,6 @@ public:
 			make_it_not(for_read);
 		if (!is_writable<T>())
 			make_it_not(for_write);
-		if (bufsize != 0 && it_is_not(line_buffered))
-			make_it(fully_buffered);
 		blen_ = bufsize;
 	}
 
@@ -396,8 +395,10 @@ private:
 	enum
 	{
 		// if neither presents, unbuffered
-		fully_buffered = 0x0001,
+		fully_buffered = int(opening::fully_buffered),
 		line_buffered = int(opening::line_buffered),
+		// meaning TBD
+		buffered = int(opening::buffered),
 		// if both present, opened for read and write
 		for_read = int(opening::for_read),
 		for_write = int(opening::for_write),
