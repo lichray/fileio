@@ -33,7 +33,10 @@
 #include <memory>
 #include <system_error>
 #include <locale>
+#include <string>
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
 
 #if !defined(_WIN32)
 #include <unistd.h>
@@ -176,6 +179,9 @@ private:
 	template <typename T>
 	using is_resizable = detector_of<being_resizable>::template call<T>;
 
+#if defined(WIN32)
+	using ssize_t = ptrdiff_t;
+#endif
 	using _unspecified_ = _ifflags<opening>;
 
 public:
@@ -223,6 +229,10 @@ public:
 			make_it_not(for_read);
 		if (!is_writable<T>())
 			make_it_not(for_write);
+		if (!is_seekable<T>())
+			make_it_not(append_mode);
+		if (bufsize != 0 and not buffering())
+			make_it(buffered);
 		blen_ = bufsize;
 	}
 
@@ -326,15 +336,8 @@ public:
 
 	io_result write(char const* buf, size_t sz, error_code& ec)
 	{
-		auto n = fp_->write(buf, int(sz));
-
-		if (n == -1)
-		{
-			ec.assign(errno, std::system_category());
-			return {};
-		}
-
-		return { size_t(n) == sz, size_t(n) };
+		auto _ = make_guard();
+		return write_nolock(buf, sz, ec);
 	}
 
 	off_t seek(off_t offset, whence where, error_code& ec)
@@ -378,11 +381,8 @@ public:
 
 	void close(error_code& ec)
 	{
-		auto r = fp_->close();
-		make_it(closed_);
-
-		if (r == -1)
-			ec.assign(errno, std::system_category());
+		auto _ = make_guard();
+		close_nolock(ec);
 	}
 
 	~file()
@@ -392,7 +392,7 @@ public:
 	}
 
 private:
-	enum
+	enum flag
 	{
 		// if neither presents, unbuffered
 		fully_buffered = int(opening::fully_buffered),
@@ -407,6 +407,8 @@ private:
 		reached_eof = 0x0100,
 		in_error = 0x0200,
 		closed_ = 0x0400,
+		reading = 0x1000,
+		writing = 0x2000,
 	};
 
 	bool it_is(int v) const
@@ -556,12 +558,86 @@ private:
 		return -1;
 	}
 
+	static void report_error(error_code& ec, int eno)
+	{
+		ec.assign(eno, std::system_category());
+	}
+
+	flag buffering() const
+	{
+		return flag(flags_ & buffered);
+	}
+
+	bool buffer_clear() const
+	{
+		return bp_.get() == p_;
+	}
+
+	bool fits_in_buffer(size_t n) const
+	{
+		return space_left() >= n;
+	}
+
+	int buffer_use() const
+	{
+		return int(p_ - bp_.get());
+	}
+
+	size_t space_left() const
+	{
+		return blen_ - buffer_use();
+	}
+
+	void prepare_to_write()
+	{
+		if (it_is(reading))
+		{
+			make_it_not(reading | reached_eof);
+			p_ = bp_.get();
+		}
+		make_it(writing);
+
+		if (buffering())
+			prepare_buffer();
+
+		if (it_is(append_mode))
+			(void)fp_->seek(0, whence::ending);
+	}
+
+	static constexpr int default_buffer_size = 8192;
+
+	void prepare_buffer();
+
+	void copy_to_buffer(char const*p, size_t sz, size_t& written)
+	{
+		assert(fits_in_buffer(sz));
+		memmove(p_, p, sz);
+		p_ += sz;
+		written += sz;
+	}
+
+	bool sflush();
+	bool swrite(char const*p, size_t sz, size_t& written);
+	bool swrite_b(char const*p, size_t sz, size_t& written);
+	bool sclose();
+
+	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
+
+	void close_nolock(error_code& ec)
+	{
+		if (!sclose())
+			report_error(ec, errno);
+	}
+
 	void _destruct() noexcept
 	{
 		if (fp_)
 		{
-			(void)fp_->close();
+			(void)sclose();
 			fp_.release()->delete_with(mr_p_);
+
+			if (bp_)
+				mr_p_->deallocate(bp_.release(), blen_);
 		}
 	}
 
@@ -592,7 +668,8 @@ private:
 
 	FILE* locktgt_{};
 	std::unique_ptr<io_interface, noop_deleter> fp_;
-	std::unique_ptr<char[]> bp_;
+	std::unique_ptr<char[], noop_deleter> bp_;
+	char* p_ = nullptr;
 	int blen_;
 	_ifflags<opening>::int_type flags_;
 	int fd_copy_;

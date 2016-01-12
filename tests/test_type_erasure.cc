@@ -3,7 +3,6 @@
 
 #include <fileio.h>
 
-#include <mutex>
 #include <array>
 
 using stdex::file;
@@ -43,9 +42,9 @@ TEST_CASE("is_writable and fileno")
 {
 	struct fake_writer
 	{
-		ptrdiff_t write(char const*, size_t)
+		ptrdiff_t write(char const*, size_t x)
 		{
-			return 0;
+			return x;
 		}
 	};
 
@@ -55,8 +54,8 @@ TEST_CASE("is_writable and fileno")
 
 	REQUIRE(fh.writable());
 	REQUIRE_FALSE(fh.readable());
-	REQUIRE_FALSE(r);
-	REQUIRE(r.count() == 0);
+	REQUIRE(r);
+	REQUIRE(r.count() == buf.size());
 
 	REQUIRE(fh.fileno() == -1);
 	REQUIRE_FALSE(fh.isatty());
