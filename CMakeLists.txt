@@ -36,6 +36,10 @@ file(GLOB tests_srcs tests/*.cc tests/*.t.cpp)
 
 add_library(fileio STATIC ${fileio_srcs})
 
+if(NOT MSVC)
+	set_target_properties(fileio PROPERTIES COMPILE_FLAGS -Wconversion)
+endif()
+
 if(BUILD_TESTING)
 	foreach(test_src ${tests_srcs})
 		get_filename_component(test_suite ${test_src} NAME_WE)

@@ -277,6 +277,9 @@ using if_else = detail::lazy_conditional_c<V::value, T, U...>;
 template <typename V, typename T = identity_of<void>, typename... U>
 using If = typename if_else<V, T, U...>::type;
 
+template <typename R, typename T>
+using void_or = If<std::is_void<R>, T, identity_of<R>>;
+
 template
 <
     template <typename> class F,

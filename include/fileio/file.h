@@ -313,7 +313,7 @@ public:
 
 	io_result read(char* buf, size_t sz, error_code& ec)
 	{
-		auto n = fp_->read(buf, sz);
+		auto n = fp_->read(buf, int(sz));
 
 		if (n == -1)
 		{
@@ -326,7 +326,7 @@ public:
 
 	io_result write(char const* buf, size_t sz, error_code& ec)
 	{
-		auto n = fp_->write(buf, sz);
+		auto n = fp_->write(buf, int(sz));
 
 		if (n == -1)
 		{

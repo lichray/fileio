@@ -53,17 +53,18 @@ namespace stdex
 namespace detail
 {
 
-template <typename F, typename... Args>
+template <typename Rt = void, typename F, typename... Args>
 inline
 auto syscall(F f, Args... args)
 {
+	using R = void_or<Rt, std::result_of<F(Args...)>>;
 #if defined(BSD) || defined(__MSYS__) || defined(_WIN32)
-	return f(args...);
+	return R(f(args...));
 #else
-	decltype(f(args...)) r;
+	R r;
 	do
 	{
-		r = f(args...);
+		r = R(f(args...));
 	} while (r == -1 && errno == EINTR);
 
 	return r;
@@ -94,12 +95,12 @@ struct file_stream
 
 	int read(char* buf, int n)
 	{
-		return detail::syscall(_read, fd_, buf, n);
+		return detail::syscall<int>(_read, fd_, buf, n);
 	}
 
 	int write(char const* buf, int n)
 	{
-		return detail::syscall(_write, fd_, buf, n);
+		return detail::syscall<int>(_write, fd_, buf, n);
 	}
 
 	file::off_t seek(file::off_t offset, whence where)
