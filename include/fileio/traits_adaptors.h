@@ -131,18 +131,14 @@ struct bind<2, F, T2>
 	using apply = typename call<T>::template apply<Ts...>;
 };
 
-template <bool, typename T>
-struct lazy_enable_if_c
-{};
+template <bool, typename T, typename... U>
+struct lazy_conditional_c;
 
 template <typename T>
-struct lazy_enable_if_c<true, T>
+struct lazy_conditional_c<true, T>
 {
 	using type = typename T::type;
 };
-
-template <bool, typename T, typename U>
-struct lazy_conditional_c;
 
 template <typename T, typename U>
 struct lazy_conditional_c<true, T, U>
@@ -275,11 +271,11 @@ struct identity_of
 	using type = T;
 };
 
-template <typename V, typename T, typename U>
-struct if_else : detail::lazy_conditional_c<V::value, T, U> {};
+template <typename V, typename T, typename... U>
+using if_else = detail::lazy_conditional_c<V::value, T, U...>;
 
-template <typename V, typename T = identity_of<void>>
-using If = typename detail::lazy_enable_if_c<V::value, T>::type;
+template <typename V, typename T = identity_of<void>, typename... U>
+using If = typename if_else<V, T, U...>::type;
 
 template
 <
