@@ -1,9 +1,8 @@
 #include <fileio.h>
 
-#include "test_data.h"
-
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
+#include "test_data.h"
 
 using stdex::file;
 using stdex::whence;

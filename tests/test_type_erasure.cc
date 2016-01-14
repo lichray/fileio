@@ -1,8 +1,7 @@
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
-
 #include <fileio.h>
 
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
 #include <array>
 
 using stdex::file;

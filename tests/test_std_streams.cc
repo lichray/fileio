@@ -1,7 +1,7 @@
+#include <fileio.h>
+
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-
-#include <fileio.h>
 
 TEST_CASE("standard streams properties")
 {
