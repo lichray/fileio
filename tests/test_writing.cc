@@ -150,7 +150,14 @@ TEST_CASE("file is line buffered")
 		REQUIRE(r.count() == s1.size());
 		REQUIRE(s.empty());
 
-		fh.write(s2.data(), s2.size());
+		r = fh.write(s2.data(), s2.size());
+
+		REQUIRE(r);
+		REQUIRE(r.count() == s2.size());
+		REQUIRE(s == (s1 + s2).substr(0, 40));
+
+		/* so far same as fully buffered */
+
 		r = fh.write("\n", 1);
 
 		REQUIRE(r);

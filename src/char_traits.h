@@ -47,7 +47,9 @@ inline
 CharT const* rfind(CharT const* s, size_t n, CharT c)
 {
 	using Iter = std::reverse_iterator<decltype(s)>;
-	return std::find(Iter(s + n), Iter(s), c).base();
+	auto ed = Iter(s);
+	auto it = std::find(Iter(s + n), Iter(s), c);
+	return it == ed ? nullptr : it.base();
 }
 
 }
