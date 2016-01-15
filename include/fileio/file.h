@@ -547,6 +547,8 @@ private:
 		xstd::uses_allocator_construction_wrapper<T> rep_;
 	};
 
+	friend struct std_streams_resource;
+
 	template <typename T>
 	static auto get_fd(T const& t) -> decltype(t.fd())
 	{
@@ -605,6 +607,12 @@ private:
 	}
 
 	static constexpr int default_buffer_size = 8192;
+	static constexpr auto buffer_alignment =
+#if !defined(_WIN32)
+	    alignof(char);
+#else
+	    alignof(wchar_t);
+#endif
 
 	void prepare_buffer();
 

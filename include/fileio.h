@@ -32,9 +32,9 @@
 namespace stdex
 {
 
-extern file _in;
-extern file _out;
-extern file _err;
+extern file in;
+extern file out;
+extern file err;
 
 }
 

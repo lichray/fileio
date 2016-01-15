@@ -184,20 +184,6 @@ template <> struct aligned_chunk<16> { alignas(16) char x; };
 template <> struct aligned_chunk<32> { alignas(32) char x; };
 template <> struct aligned_chunk<64> { alignas(64) char x; };
 
-template <typename Tp>
-struct calc_alignment
-{
-    char a;
-    Tp   x;
-public:
-    calc_alignment();
-    calc_alignment(const calc_alignment&);
-    ~calc_alignment();
-};
-
-#define alignof(T) \
-    (sizeof(XSTD::polyalloc::__details::calc_alignment<T>) - sizeof(T))
-
 } // end namespace __details
     
 } // end namespace polyalloc

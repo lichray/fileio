@@ -152,7 +152,7 @@ void file::prepare_buffer()
 			}
 		}
 #endif
-		bp_.reset((char*)mr_p_->allocate(blen_));
+		bp_.reset((char*)mr_p_->allocate(blen_, buffer_alignment));
 		p_ = bp_.get();
 	}
 }

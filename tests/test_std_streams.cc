@@ -5,18 +5,18 @@
 
 TEST_CASE("standard streams properties")
 {
-	REQUIRE_FALSE(stdex::_in.closed());
-	REQUIRE(stdex::_in.readable());
-	REQUIRE_FALSE(stdex::_in.writable());
-	REQUIRE(stdex::_in.fileno() == 0);
+	REQUIRE_FALSE(stdex::in.closed());
+	REQUIRE(stdex::in.readable());
+	REQUIRE_FALSE(stdex::in.writable());
+	REQUIRE(stdex::in.fileno() == 0);
 
-	REQUIRE_FALSE(stdex::_out.closed());
-	REQUIRE_FALSE(stdex::_out.readable());
-	REQUIRE(stdex::_out.writable());
-	REQUIRE(stdex::_out.fileno() == 1);
+	REQUIRE_FALSE(stdex::out.closed());
+	REQUIRE_FALSE(stdex::out.readable());
+	REQUIRE(stdex::out.writable());
+	REQUIRE(stdex::out.fileno() == 1);
 
-	REQUIRE_FALSE(stdex::_err.closed());
-	REQUIRE_FALSE(stdex::_err.readable());
-	REQUIRE(stdex::_err.writable());
-	REQUIRE(stdex::_err.fileno() == 2);
+	REQUIRE_FALSE(stdex::err.closed());
+	REQUIRE_FALSE(stdex::err.readable());
+	REQUIRE(stdex::err.writable());
+	REQUIRE(stdex::err.fileno() == 2);
 }

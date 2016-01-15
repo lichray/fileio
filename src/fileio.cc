@@ -28,8 +28,45 @@
 namespace stdex
 {
 
-file _in{file_stream(0), opening::buffered | opening::for_read };
-file _out{file_stream(1), opening::buffered | opening::for_write };
-file _err{file_stream(2), opening::for_write};
+struct std_streams_resource : pmr::memory_resource
+{
+	void* allocate(size_t bytes, size_t alignment) override
+	{
+		if (alignment == file::buffer_alignment)
+			return up_->allocate(bytes, alignment);
+		else
+		{
+			assert(i_ < 3 && "no more standard streams please");
+			return &a_[i_++];
+		}
+	}
+
+	void deallocate(void* p, size_t bytes, size_t alignment) override
+	{
+		if (alignment == file::buffer_alignment)
+			up_->deallocate(p, bytes, alignment);
+	}
+
+	bool is_equal(memory_resource const&) const override
+	{
+		return false;
+	}
+
+private:
+	using target_t = file::io_core<file_stream>;
+	static_assert(alignof(target_t) > file::buffer_alignment, "sorry");
+
+	int i_ = 0;
+	pmr::memory_resource* up_ = pmr::get_default_resource();
+	std::aligned_storage_t<sizeof(target_t), alignof(target_t)> a_[3];
+};
+
+static std_streams_resource __a;
+
+file in{allocator_arg, &__a, file_stream(0),
+    opening::buffered | opening::for_read};
+file out{allocator_arg, &__a, file_stream(1),
+    opening::buffered | opening::for_write};
+file err{allocator_arg, &__a, file_stream(2), opening::for_write};
 
 }
