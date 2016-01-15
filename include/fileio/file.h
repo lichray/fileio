@@ -613,8 +613,8 @@ private:
 		}
 		make_it(writing);
 
-		if (buffering())
-			prepare_buffer();
+		if (buffering() && bp_ == nullptr)
+			setup_buffer();
 
 		if (it_is(append_mode))
 			(void)fp_->seek(0, whence::ending);
@@ -628,7 +628,7 @@ private:
 	    alignof(wchar_t);
 #endif
 
-	void prepare_buffer();
+	void setup_buffer();
 
 	void copy_to_buffer(char const*p, size_t sz, size_t& written)
 	{

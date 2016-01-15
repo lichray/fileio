@@ -113,48 +113,44 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 	return { ok, written };
 }
 
-void file::prepare_buffer()
+void file::setup_buffer()
 {
-	if (bp_ == nullptr)
-	{
-		// Windows has no st_blksize, MSYS2 sets erroneous st_blksize
+	// Windows has no st_blksize, MSYS2 sets erroneous st_blksize
 #if defined(_WIN32) || defined(__MSYS__)
+	if (blen_ == 0)
+		blen_ = default_buffer_size;
+	if (buffering() == buffered)
+	{
+		if (isatty())
+			make_it_not(fully_buffered);
+		else
+			make_it_not(line_buffered);
+	}
+#else
+	struct _stat64 st;
+	if (fd_copy_ == -1 or _fstat64(fd_copy_, &st) == -1)
+	{
 		if (blen_ == 0)
 			blen_ = default_buffer_size;
 		if (buffering() == buffered)
+			make_it_not(line_buffered);
+	}
+	else
+	{
+		if (blen_ == 0)
+			blen_ = st.st_blksize <= 0 ?
+			    default_buffer_size : st.st_blksize;
+		if (buffering() == buffered)
 		{
-			if (isatty())
+			if (S_ISCHR(st.st_mode) and _isatty(fd_copy_))
 				make_it_not(fully_buffered);
 			else
 				make_it_not(line_buffered);
 		}
-#else
-		struct _stat64 st;
-		if (fd_copy_ == -1 or _fstat64(fd_copy_, &st) == -1)
-		{
-			if (blen_ == 0)
-				blen_ = default_buffer_size;
-			if (buffering() == buffered)
-				make_it_not(line_buffered);
-		}
-		else
-		{
-			if (blen_ == 0)
-				blen_ = st.st_blksize <= 0 ?
-				    default_buffer_size :
-				    st.st_blksize;
-			if (buffering() == buffered)
-			{
-				if (S_ISCHR(st.st_mode) and _isatty(fd_copy_))
-					make_it_not(fully_buffered);
-				else
-					make_it_not(line_buffered);
-			}
-		}
-#endif
-		bp_.reset((char*)mr_p_->allocate(blen_, buffer_alignment));
-		p_ = bp_.get();
 	}
+#endif
+	bp_.reset((char*)mr_p_->allocate(blen_, buffer_alignment));
+	p_ = bp_.get();
 }
 
 bool file::swrite(char const*p, size_t sz, size_t& written)
