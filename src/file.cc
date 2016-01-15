@@ -145,7 +145,7 @@ void file::prepare_buffer()
 				    st.st_blksize;
 			if (buffering() == buffered)
 			{
-				if (_S_ISCHR(st.st_mode) and _isatty(fd_copy_))
+				if (S_ISCHR(st.st_mode) and _isatty(fd_copy_))
 					make_it_not(fully_buffered);
 				else
 					make_it_not(line_buffered);

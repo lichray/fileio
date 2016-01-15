@@ -37,7 +37,8 @@ file(GLOB tests_srcs tests/*.cc tests/*.t.cpp)
 add_library(fileio STATIC ${fileio_srcs})
 
 if(NOT MSVC)
-	set_target_properties(fileio PROPERTIES COMPILE_FLAGS -Wconversion)
+	set_target_properties(fileio PROPERTIES COMPILE_FLAGS
+	    "-Wconversion -Wno-sign-conversion")
 endif()
 
 if(BUILD_TESTING)
