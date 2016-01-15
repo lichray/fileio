@@ -63,10 +63,18 @@ private:
 
 static std_streams_resource __a;
 
-file in{allocator_arg, &__a, file_stream(0),
-    opening::buffered | opening::for_read};
-file out{allocator_arg, &__a, file_stream(1),
-    opening::buffered | opening::for_write};
-file err{allocator_arg, &__a, file_stream(2), opening::for_write};
+template <typename Flags>
+inline
+file make_std_stream(int fd, Flags mode, FILE* target)
+{
+	file fh(allocator_arg, &__a, file_stream(fd), mode);
+	fh.locking(target);
+
+	return fh;
+}
+
+file in = make_std_stream(0, opening::buffered | opening::for_read, stdin);
+file out = make_std_stream(1, opening::buffered | opening::for_write, stdout);
+file err = make_std_stream(2, opening::for_write, stderr);
 
 }

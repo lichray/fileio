@@ -236,6 +236,20 @@ public:
 		blen_ = bufsize;
 	}
 
+	file(file&&) noexcept = default;
+
+	FILE* locking(nullptr_t)
+	{
+		return xp_.release();
+	}
+
+	FILE* locking(FILE* stream)
+	{
+		auto p = xp_.get();
+		xp_.reset(stream);
+		return p;
+	}
+
 	bool readable() const noexcept
 	{
 		return it_is(for_read);
@@ -658,12 +672,12 @@ private:
 
 	void lock() const
 	{
-		_lock_file(locktgt_);
+		_lock_file(xp_.get());
 	}
 
 	void unlock() const
 	{
-		_unlock_file(locktgt_);
+		_unlock_file(xp_.get());
 	}
 
 	using lock_guard = conditional_lock_guard<file>;
@@ -671,10 +685,10 @@ private:
 
 	lock_guard make_guard()
 	{
-		return { locktgt_ != nullptr, *this };
+		return { (bool)xp_, *this };
 	}
 
-	FILE* locktgt_{};
+	std::unique_ptr<FILE, noop_deleter> xp_;
 	std::unique_ptr<io_interface, noop_deleter> fp_;
 	std::unique_ptr<char[], noop_deleter> bp_;
 	char* p_ = nullptr;
