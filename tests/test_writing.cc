@@ -223,6 +223,7 @@ TEST_CASE("moving and swapping")
 
 		f2 = {};
 		REQUIRE(s == s1);
+		REQUIRE(f2.closed());
 
 		f2 = std::move(fh);
 		REQUIRE(s == s1);

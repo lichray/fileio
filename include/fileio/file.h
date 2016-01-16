@@ -286,13 +286,13 @@ public:
 	bool readable() const noexcept
 	{
 		auto _ = make_guard();
-		return readable_nolock();
+		return it_is(for_read);
 	}
 
 	bool writable() const noexcept
 	{
 		auto _ = make_guard();
-		return writable_nolock();
+		return it_is(for_write);
 	}
 
 	bool isatty() const
@@ -309,7 +309,7 @@ public:
 	bool closed() const noexcept
 	{
 		auto _ = make_guard();
-		return it_is(closed_);
+		return it_is_not(for_read | for_write);
 	}
 
 	io_result read(char* buf, size_t sz)
@@ -472,8 +472,6 @@ private:
 		append_mode = int(opening::append_mode),
 		// other states
 		reached_eof = 0x0100,
-		in_error = 0x0200,
-		closed_ = 0x0400,
 		reading = 0x1000,
 		writing = 0x2000,
 	};
@@ -716,16 +714,6 @@ private:
 	{
 		if (!sclose())
 			report_error(ec, errno);
-	}
-
-	bool readable_nolock() const noexcept
-	{
-		return it_is(for_read) && it_is_not(closed_);
-	}
-
-	bool writable_nolock() const noexcept
-	{
-		return it_is(for_write) && it_is_not(closed_);
 	}
 
 	void _destruct() noexcept

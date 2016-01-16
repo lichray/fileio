@@ -62,7 +62,7 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 	if (sz == 0)
 		return { true, 0 };
 
-	if (not writable_nolock())
+	if (it_is_not(for_write))
 	{
 		report_error(ec, EBADF);
 		return {};
@@ -171,10 +171,7 @@ bool file::swrite(char const*p, size_t sz, size_t& written)
 	{
 		auto r = fp_->write(p, n);
 		if (r == -1)
-		{
-			make_it(in_error);
 			return false;
-		}
 		p += r;
 		sz -= r;
 		written += r;
@@ -213,9 +210,6 @@ bool file::swrite_b(char const*p, size_t sz, size_t& written)
 		}
 	}
 
-	if (not ok)
-		make_it(in_error);
-
 	return ok;
 }
 
@@ -237,7 +231,6 @@ bool file::sflush()
 		{
 			memmove(bp_.get(), p, sz);
 			p_ = bp_.get() + sz;
-			make_it(in_error);
 			return false;
 		}
 		p += r;
@@ -252,7 +245,7 @@ bool file::sflush()
 
 bool file::sclose()
 {
-	if (it_is(closed_))
+	if (it_is_not(for_read | for_write))
 		return true;
 
 	bool flushok = it_is(writing) ? sflush() : true;
@@ -265,7 +258,7 @@ bool file::sclose()
 	if (closeok and not flushok)
 		errno = eno;
 
-	make_it(closed_);
+	make_it_not(for_read | for_write);
 	return flushok and closeok;
 }
 
