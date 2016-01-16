@@ -341,7 +341,7 @@ public:
 
 	void rewind()
 	{
-		seek({}, whence::beginning);
+		seek(0, whence::beginning);
 	}
 
 	off_t tell()
@@ -411,12 +411,12 @@ public:
 
 	void rewind(error_code& ec)
 	{
-		seek({}, whence::beginning, ec);
+		seek(0, whence::beginning, ec);
 	}
 
 	off_t tell(error_code& ec)
 	{
-		return seek({}, whence::current, ec);
+		return seek(0, whence::current, ec);
 	}
 
 	void resize(off_t len, error_code& ec)
@@ -673,7 +673,10 @@ private:
 
 		if (buffering() && bp_ == nullptr)
 			setup_buffer();
+	}
 
+	void seek_if_appending()
+	{
 		if (it_is(append_mode))
 			(void)fp_->seek(0, whence::ending);
 	}

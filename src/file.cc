@@ -165,6 +165,8 @@ bool file::swrite(char const*p, size_t sz, size_t& written)
 	else
 		n = int(sz);
 
+	seek_if_appending();
+
 	while (sz != 0)
 	{
 		auto r = fp_->write(p, n);
@@ -225,6 +227,8 @@ bool file::sflush()
 	if (n > 32767 and isatty())
 		n = 32767;
 #endif
+	seek_if_appending();
+
 	auto p = bp_.get();
 	while (sz != 0)
 	{
