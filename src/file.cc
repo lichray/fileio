@@ -62,7 +62,7 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 	if (sz == 0)
 		return { true, 0 };
 
-	if (not writable())
+	if (not writable_nolock())
 	{
 		report_error(ec, EBADF);
 		return {};
@@ -253,11 +253,15 @@ bool file::sclose()
 
 	bool flushok = it_is(writing) ? sflush() : true;
 	auto eno = errno;
-	make_it(closed_);
+
+	if (bp_)
+		mr_p_->deallocate(bp_.release(), blen_);
 
 	bool closeok = (fp_->close() == 0);
 	if (closeok and not flushok)
 		errno = eno;
+
+	make_it(closed_);
 	return flushok and closeok;
 }
 

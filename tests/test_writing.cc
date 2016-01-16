@@ -195,3 +195,49 @@ TEST_CASE("file is line buffered")
 	// flushed upon destruction
 	REQUIRE(s == s7);
 }
+
+TEST_CASE("moving and swapping")
+{
+	std::string s;
+	std::string s1{"", 1};
+
+	file fh(test_writer{s}, opening::for_write | opening::fully_buffered);
+	file::io_result r;
+
+	r = fh.write("", 1);
+
+	REQUIRE(r);
+	REQUIRE(r.count() == 1);
+	REQUIRE(s.empty());
+
+	SECTION("move assignment flushes, swapping does not")
+	{
+		file f2(test_writer{s},
+		    opening::for_write | opening::fully_buffered);
+
+		f2.write("\n", 2);
+		REQUIRE(s.empty());
+
+		swap(fh, f2);
+		REQUIRE(s.empty());
+
+		f2 = {};
+		REQUIRE(s == s1);
+
+		f2 = std::move(fh);
+		REQUIRE(s == s1);
+	}
+
+	SECTION("closing making the file not writable")
+	{
+		REQUIRE(s.empty());
+		REQUIRE(fh.writable());
+
+		// calling twice has no effect
+		fh.close();
+		fh.close();
+
+		REQUIRE(s == s1);
+		REQUIRE_FALSE(fh.writable());
+	}
+}

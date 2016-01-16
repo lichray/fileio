@@ -223,6 +223,7 @@ public:
 		auto p = a.allocate(1);
 		a.construct(p, std::forward<T>(t));
 		fp_.reset(p);
+		assert(opened());
 
 		flags_ = decltype(flags_)(flags);
 		if (!is_readable<T>())
@@ -238,13 +239,45 @@ public:
 
 	file(file&&) noexcept = default;
 
+	file& operator=(file&& other) noexcept
+	{
+		_destruct();
+		xp_ = std::move(other.xp_);
+		fp_ = std::move(other.fp_);
+		bp_ = std::move(other.bp_);
+		// the followings are OK to be copied
+		p_ = std::move(other.p_);
+		blen_ = std::move(other.blen_);
+		flags_ = std::move(other.flags_);
+		fd_copy_ = std::move(other.fd_copy_);
+		mr_p_ = std::move(other.mr_p_);
+
+		return *this;
+	}
+
+	friend
+	void swap(file& lhs, file& rhs) noexcept
+	{
+		using std::swap;
+		swap(lhs.xp_, rhs.xp_);
+		swap(lhs.fp_, rhs.fp_);
+		swap(lhs.bp_, rhs.bp_);
+		swap(lhs.p_, rhs.p_);
+		swap(lhs.blen_, rhs.blen_);
+		swap(lhs.flags_, rhs.flags_);
+		swap(lhs.fd_copy_, rhs.fd_copy_);
+		swap(lhs.mr_p_, rhs.mr_p_);
+	}
+
 	FILE* locking(nullptr_t)
 	{
+		assert(opened());
 		return xp_.release();
 	}
 
 	FILE* locking(FILE* stream)
 	{
+		assert(opened());
 		auto p = xp_.get();
 		xp_.reset(stream);
 		return p;
@@ -252,12 +285,14 @@ public:
 
 	bool readable() const noexcept
 	{
-		return it_is(for_read);
+		auto _ = make_guard();
+		return readable_nolock();
 	}
 
 	bool writable() const noexcept
 	{
-		return it_is(for_write);
+		auto _ = make_guard();
+		return writable_nolock();
 	}
 
 	bool isatty() const
@@ -267,11 +302,13 @@ public:
 
 	int fileno() const
 	{
+		assert(opened());
 		return fd_copy_;
 	}
 
 	bool closed() const noexcept
 	{
+		auto _ = make_guard();
 		return it_is(closed_);
 	}
 
@@ -350,6 +387,7 @@ public:
 
 	io_result write(char const* buf, size_t sz, error_code& ec)
 	{
+		assert(opened());
 		auto _ = make_guard();
 		return write_nolock(buf, sz, ec);
 	}
@@ -395,6 +433,7 @@ public:
 
 	void close(error_code& ec)
 	{
+		assert(opened());
 		auto _ = make_guard();
 		close_nolock(ec);
 	}
@@ -579,6 +618,11 @@ private:
 		ec.assign(eno, std::system_category());
 	}
 
+	bool opened() const noexcept
+	{
+		return (bool)fp_;
+	}
+
 	flag buffering() const
 	{
 		return flag(flags_ & buffered);
@@ -651,15 +695,22 @@ private:
 			report_error(ec, errno);
 	}
 
+	bool readable_nolock() const noexcept
+	{
+		return it_is(for_read) && it_is_not(closed_);
+	}
+
+	bool writable_nolock() const noexcept
+	{
+		return it_is(for_write) && it_is_not(closed_);
+	}
+
 	void _destruct() noexcept
 	{
-		if (fp_)
+		if (opened())
 		{
 			(void)sclose();
 			fp_.release()->delete_with(mr_p_);
-
-			if (bp_)
-				mr_p_->deallocate(bp_.release(), blen_);
 		}
 	}
 
@@ -680,10 +731,10 @@ private:
 		_unlock_file(xp_.get());
 	}
 
-	using lock_guard = conditional_lock_guard<file>;
+	using lock_guard = conditional_lock_guard<file const>;
 	friend lock_guard;
 
-	lock_guard make_guard()
+	lock_guard make_guard() const
 	{
 		return { (bool)xp_, *this };
 	}
