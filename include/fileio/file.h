@@ -365,6 +365,13 @@ public:
 		resize(tell());
 	}
 
+	void flush()
+	{
+		error_code ec;
+		flush(ec);
+		if (ec) throw std::system_error(ec);
+	}
+
 	void close()
 	{
 		error_code ec;
@@ -429,6 +436,13 @@ public:
 			ec = ec2;
 		else
 			resize(off, ec);
+	}
+
+	void flush(error_code& ec)
+	{
+		assert(opened());
+		auto _ = make_guard();
+		flush_nolock(ec);
 	}
 
 	void close(error_code& ec)
@@ -688,6 +702,12 @@ private:
 	bool sclose();
 
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
+
+	void flush_nolock(error_code& ec)
+	{
+		if (!sflush())
+			report_error(ec, errno);
+	}
 
 	void close_nolock(error_code& ec)
 	{

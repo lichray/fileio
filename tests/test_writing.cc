@@ -118,7 +118,7 @@ TEST_CASE("file is fully buffered")
 		fh.write(s1.data(), s1.size());
 		REQUIRE(s.empty());
 
-		fh.close();
+		fh.flush();
 		REQUIRE(s == s1);
 	}
 }
