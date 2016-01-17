@@ -55,10 +55,10 @@ using std::distance;
 namespace stdex
 {
 
+using cm = charmap<char>;
+
 file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 {
-	using cm = charmap<char>;
-
 	if (sz == 0)
 		return { true, 0 };
 
@@ -113,6 +113,41 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 	return { ok, written };
 }
 
+file::io_result file::put_nolock(char c, error_code& ec)
+{
+	if (it_is_not(for_write))
+	{
+		report_error(ec, EBADF);
+		return {};
+	}
+
+	prepare_to_write();
+	bool ok = true;
+
+	if (buffering())
+	{
+		if (space_left() == 0)
+			ok = sflush();
+		if (ok)
+		{
+			*p_++ = c;
+			--w_;
+			if (c == cm::eol and buffering() == line_buffered)
+				ok = sflush();
+		}
+	}
+	else
+	{
+		size_t w;
+		ok = swrite(&c, 1, w);
+	}
+
+	if (not ok)
+		report_error(ec, errno);
+
+	return { true, 1 };
+}
+
 void file::setup_buffer()
 {
 	// Windows has no st_blksize, MSYS2 sets erroneous st_blksize
@@ -151,6 +186,7 @@ void file::setup_buffer()
 #endif
 	bp_.reset((char*)mr_p_->allocate(blen_, buffer_alignment));
 	p_ = bp_.get();
+	w_ = blen_;
 }
 
 bool file::swrite(char const*p, size_t sz, size_t& written)
@@ -207,6 +243,7 @@ bool file::swrite_b(char const*p, size_t sz, size_t& written)
 			copy_to_buffer(p, m, written);
 			p += m;
 			sz -= m;
+			w_ -= int(m);
 		}
 	}
 
@@ -231,6 +268,8 @@ bool file::sflush()
 		{
 			memmove(bp_.get(), p, sz);
 			p_ = bp_.get() + sz;
+			w_ = blen_ - sz;
+
 			return false;
 		}
 		p += r;
@@ -240,6 +279,8 @@ bool file::sflush()
 	}
 
 	p_ = bp_.get();
+	w_ = blen_;
+
 	return true;
 }
 

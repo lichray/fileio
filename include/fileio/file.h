@@ -247,6 +247,8 @@ public:
 		fp_ = std::move(other.fp_);
 		bp_ = std::move(other.bp_);
 		// the followings are OK to be copied
+		r_ = std::move(other.r_);
+		w_ = std::move(other.w_);
 		p_ = std::move(other.p_);
 		blen_ = std::move(other.blen_);
 		flags_ = std::move(other.flags_);
@@ -263,6 +265,8 @@ public:
 		swap(lhs.xp_, rhs.xp_);
 		swap(lhs.fp_, rhs.fp_);
 		swap(lhs.bp_, rhs.bp_);
+		swap(lhs.r_, rhs.r_);
+		swap(lhs.w_, rhs.w_);
 		swap(lhs.p_, rhs.p_);
 		swap(lhs.blen_, rhs.blen_);
 		swap(lhs.flags_, rhs.flags_);
@@ -326,6 +330,21 @@ public:
 	{
 		error_code ec;
 		auto r = write(buf, sz, ec);
+		if (ec) throw std::system_error(ec);
+
+		return r;
+	}
+
+	io_result put(char c)
+	{
+		assert(opened());
+		auto _ = make_guard();
+
+		if (auto r = put_fasttrack(c))
+			return r;
+
+		error_code ec;
+		auto r = put_nolock(c, ec);
 		if (ec) throw std::system_error(ec);
 
 		return r;
@@ -398,6 +417,17 @@ public:
 		assert(opened());
 		auto _ = make_guard();
 		return write_nolock(buf, sz, ec);
+	}
+
+	io_result put(char c, error_code& ec)
+	{
+		assert(opened());
+		auto _ = make_guard();
+
+		if (auto r = put_fasttrack(c))
+			return r;
+
+		return put_nolock(c, ec);
 	}
 
 	off_t seek(off_t offset, whence where, error_code& ec)
@@ -667,6 +697,7 @@ private:
 		{
 			make_it_not(reading | reached_eof);
 			p_ = bp_.get();
+			w_ = blen_;
 		}
 		make_it(writing);
 
@@ -704,6 +735,19 @@ private:
 	bool sclose();
 
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
+	io_result put_nolock(char c, error_code& ec);
+
+	io_result put_fasttrack(char c)
+	{
+		if (--w_ >= 0 &&
+		    (c != charmap<char>::eol || buffering() != line_buffered))
+		{
+			*p_++ = c;
+			return { true, 1 };
+		}
+
+		return {};
+	}
 
 	void flush_nolock(error_code& ec)
 	{
@@ -754,6 +798,8 @@ private:
 	std::unique_ptr<FILE, noop_deleter> xp_;
 	std::unique_ptr<io_interface, noop_deleter> fp_;
 	std::unique_ptr<char[], noop_deleter> bp_;
+	int r_ = 0;
+	int w_ = 0;
 	char* p_ = nullptr;
 	int blen_;
 	_ifflags<opening>::int_type flags_;

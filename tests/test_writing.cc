@@ -44,6 +44,17 @@ TEST_CASE("file is not opened for write")
 		REQUIRE(ec.value() == EBADF);
 		REQUIRE(ec.category() == std::system_category());
 	}
+
+	SECTION("attempt to put a byte is also an error")
+	{
+		std::error_code ec;
+		r = fh.put('x', ec);
+
+		REQUIRE_FALSE(r);
+		REQUIRE(r.count() == 0);
+		REQUIRE(ec.value() == EBADF);
+		REQUIRE(ec.category() == std::system_category());
+	}
 }
 
 TEST_CASE("file is unbuffered")
@@ -62,7 +73,7 @@ TEST_CASE("file is unbuffered")
 	REQUIRE(s == s1);
 	REQUIRE(errno == 0);
 
-	r = fh.write("!", 1);
+	r = fh.put('!');
 
 	REQUIRE(r);
 	REQUIRE(r.count() == 1);
@@ -83,6 +94,7 @@ TEST_CASE("file is fully buffered")
 
 	auto tt = s1.size() + s2.size();
 	CHECK(s1.size() < 21);
+	CHECK(s1.size() > 12);
 	CHECK(tt > 21);
 	CHECK(tt < 42);
 
@@ -112,11 +124,13 @@ TEST_CASE("file is fully buffered")
 	{
 		// has the same effect as long as the underlying
 		// writer is not a TTY
-		file fh(test_writer{s}, opening::for_write, 21);
+		file fh(test_writer{s}, opening::for_write, 12);
 		file::io_result r;
 
-		fh.write(s1.data(), s1.size());
-		REQUIRE(s.empty());
+		for (auto c : s1)
+			fh.put(c);
+
+		REQUIRE(s == s1.substr(0, 12));
 
 		fh.flush();
 		REQUIRE(s == s1);
@@ -165,19 +179,37 @@ TEST_CASE("file is line buffered")
 		REQUIRE(s == s1 + s2 + "\n");
 
 		s.clear();
-		fh.write(s3.data(), s3.size());
-		r = fh.write(s4.data(), s4.size());
 
-		REQUIRE(r);
-		REQUIRE(r.count() == s4.size());
-		REQUIRE(s == s3 + s4.substr(0, s4.find('\n') + 1));
+		SECTION("write across NL, then put")
+		{
+			fh.write(s3.data(), s3.size());
+			r = fh.write(s4.data(), s4.size());
 
-		s.clear();
-		r = fh.write(s5.data(), s5.size());
+			REQUIRE(r);
+			REQUIRE(r.count() == s4.size());
+			REQUIRE(s == s3 + s4.substr(0, s4.find('\n') + 1));
 
-		REQUIRE(r);
-		REQUIRE(r.count() == s5.size());
-		REQUIRE(s == s4.substr(s4.find('\n') + 1) + s5);
+			for (auto c : s5)
+				fh.put(c);
+
+			REQUIRE(s == s3 + s4 + s5);
+		}
+
+		SECTION("put across NL, then write")
+		{
+			for (auto c : s3)
+				fh.put(c);
+			for (auto c : s4)
+				fh.put(c);
+
+			REQUIRE(s == s3 + s4.substr(0, s4.find('\n') + 1));
+
+			r = fh.write(s5.data(), s5.size());
+
+			REQUIRE(r);
+			REQUIRE(r.count() == s5.size());
+			REQUIRE(s == s3 + s4 + s5);
+		}
 
 		s.clear();
 		r = fh.write(s6.data(), s6.size());
