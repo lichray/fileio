@@ -721,7 +721,7 @@ private:
 
 	void setup_buffer();
 
-	void copy_to_buffer(char const*p, size_t sz, size_t& written)
+	void copy_to_buffer(char const* p, size_t sz, size_t& written)
 	{
 		assert(fits_in_buffer(sz));
 		memmove(p_, p, sz);
@@ -730,8 +730,8 @@ private:
 	}
 
 	bool sflush();
-	bool swrite(char const*p, size_t sz, size_t& written);
-	bool swrite_b(char const*p, size_t sz, size_t& written);
+	bool swrite(char const* p, size_t sz, size_t& written);
+	bool swrite_b(char const* p, size_t sz, size_t& written);
 	bool sclose();
 
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);

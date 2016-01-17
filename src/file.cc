@@ -189,7 +189,7 @@ void file::setup_buffer()
 	w_ = blen_;
 }
 
-bool file::swrite(char const*p, size_t sz, size_t& written)
+bool file::swrite(char const* p, size_t sz, size_t& written)
 {
 	int n;
 #if defined(_WIN32)
@@ -218,7 +218,7 @@ bool file::swrite(char const*p, size_t sz, size_t& written)
 	return true;
 }
 
-bool file::swrite_b(char const*p, size_t sz, size_t& written)
+bool file::swrite_b(char const* p, size_t sz, size_t& written)
 {
 	bool ok = true;
 
