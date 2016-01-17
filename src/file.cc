@@ -27,7 +27,7 @@
 
 #include <fileio/file.h>
 
-#include "char_traits.h"
+#include "string_algo.h"
 
 #include <iterator>
 #include <ciso646>
@@ -57,7 +57,7 @@ namespace stdex
 
 file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 {
-	using ct = char_traits<char>;
+	using cm = charmap<char>;
 
 	if (sz == 0)
 		return { true, 0 };
@@ -78,11 +78,11 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 		ok = swrite_b(buf, sz, written);
 		break;
 	case line_buffered:
-		if (buffer_clear() and buf[sz - 1] == ct::eol)
+		if (buffer_clear() and buf[sz - 1] == cm::eol)
 			ok = swrite(buf, sz, written);
 		else
 		{
-			auto ep = rfind(buf, sz, ct::eol);
+			auto ep = rfind(buf, sz, cm::eol);
 			if (ep == nullptr)
 				ok = swrite_b(buf, sz, written);
 			else

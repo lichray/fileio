@@ -29,6 +29,7 @@
 #include "traits_adaptors.h"
 #include "polymorphic_allocator.h"
 #include "lock_guard.h"
+#include "charmap.h"
 
 #include <memory>
 #include <system_error>
