@@ -23,31 +23,85 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _STDEX_STRING_ALGO_H
-#define _STDEX_STRING_ALGO_H
+#define NOMINMAX
 
-#include <algorithm>
+#include <fileio/file.h>
+
+#include "string_algo.h"
+
 #include <iterator>
+#include <ciso646>
+#include <limits.h>
 
 namespace stdex
 {
 
-template <typename CharT>
-char* as_bytes(CharT& s)
-{
-	return reinterpret_cast<char*>(std::addressof(s));
-}
+using cm = charmap<wchar_t>;
 
-template <typename CharT>
 inline
-CharT const* rfind(CharT const* s, size_t n, CharT c)
+bool my_wcrtomb(char* buf, wchar_t c, mbstate_t& mbs, size_t& len)
 {
-	using Iter = std::reverse_iterator<decltype(s)>;
-	auto ed = Iter(s);
-	auto it = std::find(Iter(s + n), Iter(s), c);
-	return it == ed ? nullptr : it.base();
+	len = wcrtomb(buf, c, &mbs);
+	return len != (size_t)-1;
 }
 
-}
+void file::print_nolock(wchar_t c, error_code& ec)
+{
+	if (it_is_not(for_write))
+	{
+		report_error(ec, EBADF);
+		return;
+	}
 
+	prepare_to_write();
+	bool ok = true;
+
+	if (buffering())
+	{
+		if (not fits_in_buffer(cm::mb_len))
+			ok = sflush();
+		if (ok)
+		{
+#if defined(_WIN32)
+			if (bypass_wchar_conversion())
+			{
+				*p_++ = as_bytes(c)[0];
+				*p_++ = as_bytes(c)[1];
+				w_ -= int(cm::mb_len);
+			}
+			else
 #endif
+			{
+				size_t len;
+				if ((ok = my_wcrtomb(p_, c, mbs_, len)))
+				{
+					p_ += len;
+					w_ -= int(len);
+				}
+			}
+			if (ok and c == cm::eol and
+			    buffering() == line_buffered)
+				ok = sflush();
+		}
+	}
+	else
+	{
+		size_t w;
+#if defined(_WIN32)
+		if (bypass_wchar_conversion())
+			ok = swrite(as_bytes(c), cm::mb_len, w);
+		else
+#endif
+		{
+			char wcb[cm::mb_len];
+			size_t len;
+			if ((ok = my_wcrtomb(wcb, c, mbs_, len)))
+				ok = swrite(wcb, len, w);
+		}
+	}
+
+	if (not ok)
+		report_error(ec, errno);
+}
+
+}

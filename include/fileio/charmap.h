@@ -38,6 +38,14 @@ struct charmap<char>
 	static constexpr auto eol = '\n';
 };
 
+template <>
+struct charmap<wchar_t>
+{
+	static constexpr auto eol = L'\n';
+	// no MB_LEN_MAX, thanks
+	static constexpr auto mb_len = sizeof(wchar_t);
+};
+
 }
 
 #endif

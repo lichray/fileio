@@ -259,6 +259,7 @@ public:
 		flags_ = std::move(other.flags_);
 		fd_copy_ = std::move(other.fd_copy_);
 		mr_p_ = std::move(other.mr_p_);
+		mbs_ = std::move(other.mbs_);
 
 		return *this;
 	}
@@ -277,6 +278,7 @@ public:
 		swap(lhs.flags_, rhs.flags_);
 		swap(lhs.fd_copy_, rhs.fd_copy_);
 		swap(lhs.mr_p_, rhs.mr_p_);
+		swap(lhs.mbs_, rhs.mbs_);
 	}
 
 	FILE* locking(nullptr_t)
@@ -499,6 +501,13 @@ public:
 	void print(char c, error_code& ec)
 	{
 		put(c, ec);
+	}
+
+	void print(wchar_t c, error_code& ec)
+	{
+		assert(opened());
+		auto _ = make_guard();
+		print_nolock(c, ec);
 	}
 
 	void print(string_view s, error_code& ec)
@@ -743,6 +752,11 @@ private:
 	    alignof(char);
 #else
 	    alignof(wchar_t);
+
+	bool bypass_wchar_conversion() const
+	{
+		return it_is_not(binary) && fileno() != -1;
+	}
 #endif
 
 	void setup_buffer();
@@ -762,6 +776,8 @@ private:
 
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
 	io_result put_nolock(char c, error_code& ec);
+
+	void print_nolock(wchar_t c, error_code& ec);
 
 	io_result put_fasttrack(char c)
 	{
@@ -831,7 +847,7 @@ private:
 	_ifflags<opening>::int_type flags_;
 	int fd_copy_;
 	pmr::memory_resource* mr_p_;
-	//mbstate_t mbs_{};
+	mbstate_t mbs_{};
 };
 
 #undef _isatty
