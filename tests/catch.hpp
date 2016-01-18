@@ -10199,5 +10199,37 @@ int main (int argc, char * const argv[]) {
 
 using Catch::Detail::Approx;
 
+// local extension
+#define REQUIRE_SYSTEM_ERROR(expr, eno)                                     \
+	do                                                                  \
+	{                                                                   \
+		Catch::ResultBuilder __catchResult(                         \
+		    "REQUIRE_SYSTEM_ERROR", CATCH_INTERNAL_LINEINFO, #expr, \
+		    Catch::ResultDisposition::Normal);                      \
+		if (__catchResult.allowThrows())                            \
+			try                                                 \
+			{                                                   \
+				(void) expr;                                \
+				__catchResult.captureResult(                \
+				    Catch::ResultWas::DidntThrowException); \
+			}                                                   \
+			catch (std::system_error& ex)                       \
+			{                                                   \
+				__catchResult.captureResult(                \
+				    Catch::ResultWas::Ok);                  \
+				REQUIRE(ex.code().value() == eno);          \
+				REQUIRE(ex.code().category() ==             \
+				        std::system_category());            \
+			}                                                   \
+			catch (...)                                         \
+			{                                                   \
+				__catchResult.useActiveException(           \
+				    Catch::ResultDisposition::Normal);      \
+			}                                                   \
+		else                                                        \
+			__catchResult.captureResult(Catch::ResultWas::Ok);  \
+		INTERNAL_CATCH_REACT(__catchResult)                         \
+	} while (Catch::alwaysFalse())
+
 #endif // TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 

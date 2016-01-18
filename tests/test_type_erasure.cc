@@ -95,35 +95,6 @@ TEST_CASE("error handling")
 		}
 	};
 
-#define REQUIRE_SYSTEM_ERROR(expr, eno)                                     \
-	do                                                                  \
-	{                                                                   \
-		Catch::ResultBuilder __catchResult(                         \
-		    "REQUIRE_SYSTEM_ERROR", CATCH_INTERNAL_LINEINFO, #expr, \
-		    Catch::ResultDisposition::Normal);                      \
-		if (__catchResult.allowThrows())                            \
-			try                                                 \
-			{                                                   \
-				(void) expr;                                \
-				__catchResult.captureResult(                \
-				    Catch::ResultWas::DidntThrowException); \
-			}                                                   \
-			catch (std::system_error& ex)                       \
-			{                                                   \
-				__catchResult.captureResult(                \
-				    Catch::ResultWas::Ok);                  \
-				REQUIRE(ex.code().value() == eno);          \
-			}                                                   \
-			catch (...)                                         \
-			{                                                   \
-				__catchResult.useActiveException(           \
-				    Catch::ResultDisposition::Normal);      \
-			}                                                   \
-		else                                                        \
-			__catchResult.captureResult(Catch::ResultWas::Ok);  \
-		INTERNAL_CATCH_REACT(__catchResult)                         \
-	} while (Catch::alwaysFalse())
-
 	file fh{faulty_stream(), opening::for_read | opening::for_write};
 	std::array<char, 80> buf = {};
 

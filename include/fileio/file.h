@@ -35,6 +35,7 @@
 #include <system_error>
 #include <locale>
 #include <string>
+#include <experimental/string_view>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -53,8 +54,9 @@ namespace stdex
 #define _unlock_file ::funlockfile
 #endif
 
+// fix your libc by guarding the `fileno` macro against __cplusplus
 #if defined(fileno)
-#error fix your libc by guarding the `fileno` macro against __cplusplus
+#undef fileno
 #endif
 
 namespace pmr = xstd::polyalloc;
@@ -64,6 +66,7 @@ using std::nullptr_t;
 using std::allocator_arg_t;
 using std::allocator_arg;
 using xstd::erased_type;
+using std::experimental::string_view;
 
 enum class whence
 {
@@ -80,6 +83,8 @@ enum class opening
 	for_read = 0x0004,
 	for_write = 0x0008,
 	append_mode = 0x0010,
+	binary = 0x0020,
+	crlf = binary | 0x0040,
 };
 
 template <typename Enum>
@@ -483,6 +488,24 @@ public:
 		close_nolock(ec);
 	}
 
+	template <typename T>
+	void print(T&& x)
+	{
+		error_code ec;
+		print(std::forward<T>(x), ec);
+		if (ec) throw std::system_error(ec);
+	}
+
+	void print(char c, error_code& ec)
+	{
+		put(c, ec);
+	}
+
+	void print(string_view s, error_code& ec)
+	{
+		write(s.data(), s.size(), ec);
+	}
+
 	~file()
 	{
 		auto _ = make_guard();
@@ -501,6 +524,9 @@ private:
 		for_read = int(opening::for_read),
 		for_write = int(opening::for_write),
 		append_mode = int(opening::append_mode),
+		// CRLF implies binary
+		binary = int(opening::binary),
+		crlf = int(opening::crlf),
 		// other states
 		reached_eof = 0x0100,
 		reading = 0x1000,
