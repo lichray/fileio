@@ -49,7 +49,6 @@
 #endif
 #endif
 
-using std::next;
 using std::distance;
 
 namespace stdex
@@ -83,7 +82,7 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 		else
 		{
 			auto ep = rfind(buf, sz, cm::eol);
-			if (ep == nullptr)
+			if (ep == buf)
 				ok = swrite_b(buf, sz, written);
 			else
 			{
