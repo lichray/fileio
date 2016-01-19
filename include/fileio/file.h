@@ -67,6 +67,7 @@ using std::allocator_arg_t;
 using std::allocator_arg;
 using xstd::erased_type;
 using std::experimental::string_view;
+using std::experimental::wstring_view;
 
 enum class whence
 {
@@ -515,6 +516,13 @@ public:
 		write(s.data(), s.size(), ec);
 	}
 
+	void print(wstring_view s, error_code& ec)
+	{
+		assert(opened());
+		auto _ = make_guard();
+		print_nolock(s.data(), s.size(), ec);
+	}
+
 	~file()
 	{
 		auto _ = make_guard();
@@ -786,9 +794,25 @@ private:
 		return swrite_b(p, sz, w);
 	}
 
+	bool swritew_b(wchar_t const* p, size_t sz)
+	{
+#if !defined(_WIN32)
+		auto blen = blen_;
+#else
+		auto blen = (std::min)(blen_, 32767);
+#endif
+		auto x = xswritew(bp_.get(), blen, p_, p, sz);
+		w_ = int(space_left());
+		return x;
+	}
+
+	bool xswritew(char* buf, size_t blen, char*& bp, wchar_t const* p,
+	    size_t sz);
+
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
 	io_result put_nolock(char c, error_code& ec);
 
+	void print_nolock(wchar_t const* s, size_t sz, error_code& ec);
 	void print_nolock(wchar_t c, error_code& ec);
 
 	io_result put_fasttrack(char c)

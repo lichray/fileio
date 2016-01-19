@@ -32,10 +32,20 @@
 namespace stdex
 {
 
-template <typename CharT>
-char* as_bytes(CharT& s)
+template <typename From, typename To>
+using copy_const_t = std::conditional_t<std::is_const<From>{},
+    std::add_const_t<To>, To>;
+
+template <typename CharT, typename R = copy_const_t<CharT, char>*>
+auto as_bytes(CharT& c) -> R
 {
-	return reinterpret_cast<char*>(std::addressof(s));
+	return reinterpret_cast<R>(std::addressof(c));
+}
+
+template <typename CharT, typename R = copy_const_t<CharT, char>*>
+auto as_bytes(CharT* s) -> R
+{
+	return reinterpret_cast<R>(s);
 }
 
 template <typename CharT>
