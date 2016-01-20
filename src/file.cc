@@ -136,10 +136,7 @@ file::io_result file::put_nolock(char c, error_code& ec)
 		}
 	}
 	else
-	{
-		size_t w;
-		ok = swrite(&c, 1, w);
-	}
+		ok = swrite(&c, 1);
 
 	if (not ok)
 		report_error(ec, errno);

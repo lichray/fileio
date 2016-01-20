@@ -774,6 +774,18 @@ private:
 	bool swrite_b(char const* p, size_t sz, size_t& written);
 	bool sclose();
 
+	bool swrite(char const* p, size_t sz)
+	{
+		size_t w{};
+		return swrite(p, sz, w);
+	}
+
+	bool swrite_b(char const* p, size_t sz)
+	{
+		size_t w{};
+		return swrite_b(p, sz, w);
+	}
+
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
 	io_result put_nolock(char c, error_code& ec);
 

@@ -86,17 +86,16 @@ void file::print_nolock(wchar_t c, error_code& ec)
 	}
 	else
 	{
-		size_t w;
 #if defined(_WIN32)
 		if (bypass_wchar_conversion())
-			ok = swrite(as_bytes(c), cm::mb_len, w);
+			ok = swrite(as_bytes(c), cm::mb_len);
 		else
 #endif
 		{
 			char wcb[cm::mb_len];
 			size_t len;
 			if ((ok = my_wcrtomb(wcb, c, mbs_, len)))
-				ok = swrite(wcb, len, w);
+				ok = swrite(wcb, len);
 		}
 	}
 
