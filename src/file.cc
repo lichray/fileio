@@ -217,29 +217,41 @@ bool file::swrite(char const* p, size_t sz, size_t& written)
 bool file::swrite_b(char const* p, size_t sz, size_t& written)
 {
 	bool ok = true;
+	bool seeked = false;
 
 	while (ok and sz != 0)
 	{
-		auto m = std::min(space_left(), sz);
+		auto m = int(std::min(space_left(), sz));
 
 		// buffer is full
 		if (m == 0)
 		{
 			ok = sflush();
+			seeked = true;
 		}
 		// buffer empty and we have a chunk to write
-		else if (m == size_t(blen_))
+		else if (m == blen_)
 		{
-			ok = swrite(p, m, written);
-			p += m;
-			sz -= m;
+			if (not seeked)
+			{
+				seek_if_appending();
+				seeked = true;
+			}
+#if defined(_WIN32)
+			if (m > 32767 and isatty())
+				m = 32767;
+#endif
+			auto r = fp_->write(p, m);
+			ok = (r != -1);
+			p += r;
+			sz -= r;
 		}
 		else
 		{
 			copy_to_buffer(p, m, written);
 			p += m;
 			sz -= m;
-			w_ -= int(m);
+			w_ -= m;
 		}
 	}
 
