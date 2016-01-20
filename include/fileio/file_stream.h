@@ -88,9 +88,9 @@ auto syscall(decltype(&_close) f, int fd)
 
 struct file_stream
 {
-	using native_handle = int;
+	using native_handle_type = int;
 
-	explicit file_stream(native_handle fd) : fd_(fd)
+	explicit file_stream(native_handle_type fd) : fd_(fd)
 	{}
 
 	int read(char* buf, int n)
@@ -122,14 +122,14 @@ struct file_stream
 #endif
 	}
 
-	// optional if native_handle != int
+	// optional if native_handle_type != int
 	int fd() const noexcept
 	{
 		return fd_;
 	}
 
 private:
-	native_handle fd_;
+	native_handle_type fd_;
 };
 
 #undef _read
