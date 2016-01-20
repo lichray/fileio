@@ -6180,13 +6180,12 @@ namespace Catch {
 #include <iostream>
 #include <algorithm>
 
+#include "test_data.h"
+
 namespace Catch {
 
     struct LexSort {
         bool operator() (TestCase i,TestCase j) const { return (i<j);}
-    };
-    struct RandomNumberGenerator {
-        int operator()( int n ) const { return std::rand() % n; }
     };
 
     inline std::vector<TestCase> sortTests( IConfig const& config, std::vector<TestCase> const& unsortedTestCases ) {
@@ -6201,8 +6200,7 @@ namespace Catch {
                 {
                     seedRng( config );
 
-                    RandomNumberGenerator rng;
-                    std::random_shuffle( sorted.begin(), sorted.end(), rng );
+                    std::shuffle( sorted.begin(), sorted.end(), __global_rng() );
                 }
                 break;
             case RunTests::InDeclarationOrder:
@@ -7564,7 +7562,7 @@ namespace Catch {
 
     void seedRng( IConfig const& config ) {
         if( config.rngSeed() != 0 )
-            std::srand( config.rngSeed() );
+            reseed( config.rngSeed() );
     }
     unsigned int rngSeed() {
         return getCurrentContext().getConfig()->rngSeed();

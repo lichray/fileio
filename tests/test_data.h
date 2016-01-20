@@ -1,3 +1,5 @@
+#pragma once
+
 #include <random>
 #include <algorithm>
 #include <iterator>
@@ -42,15 +44,31 @@ IntType randint(IntType a, IntType b)
 }
 
 inline
-auto random_text(size_t len, std::string const& from =
+void reseed()
+{
+	// as long as uniform_int_distribution carries no state
+	__global_rng().seed(__get_seed());
+}
+
+inline
+void reseed(uint_fast32_t value)
+{
+	// as long as uniform_int_distribution carries no state
+	__global_rng().seed(value);
+}
+
+template <typename CharT>
+inline
+auto random_text(size_t len, CharT const* from =
     "-0123456789abcdefghijklmnopqrstuvwxyz")
 {
-	std::string to;
+	std::basic_string<CharT> to;
 	to.resize(len);
+	auto ub = std::char_traits<CharT>::length(from) - 1;
 
 	std::generate(begin(to), end(to), [&]
 	    {
-		return from[randint<size_t>(0, from.size() - 1)];
+		return from[randint<size_t>(0, ub)];
 	    });
 
 	return to;
