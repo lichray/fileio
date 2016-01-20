@@ -4,6 +4,8 @@
 #include "catch.hpp"
 #include "test_data.h"
 
+using Catch::EndsWith;
+
 using stdex::file;
 using stdex::whence;
 using stdex::opening;
@@ -102,6 +104,7 @@ TEST_CASE("printing strings")
 		for (int len : { 10, 4096, 6000 })
 		{
 			auto s1 = random_text(len, L"0123456789");
+			maybe_replace(s1, '\0', std::ratio<1>());
 			std::string st(begin(s1), end(s1));
 
 			fh.print(s1);
@@ -165,7 +168,8 @@ TEST_CASE("printing strings")
 		// make the all inputs smaller than the buffer
 		for (int len : { 1, 100, 157, 159, 158 })
 		{
-			auto s1 = random_text(len, L"0123456789abcdef\n");
+			auto s1 = random_text(len, L"0123456789abcdef");
+			maybe_replace(s1, '\n', std::ratio<5, 2>());
 			st.append(begin(s1), end(s1));
 
 			if (len % 2)
@@ -174,9 +178,7 @@ TEST_CASE("printing strings")
 			else
 				fh.print(s1);
 
-			auto nlpos = s.rfind('\n');
-			if (nlpos != s.npos)
-				REQUIRE(nlpos == s.size() - 1);
+			REQUIRE_THAT(s, EndsWith("\n"));
 		}
 
 		stdex::string_view sv(st.data(), st.rfind('\n') + 1);

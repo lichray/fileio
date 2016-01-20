@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iterator>
 #include <string>
+#include <ratio>
 
 #if defined(_MSC_VER)
 #pragma intrinsic(__rdtsc)
@@ -72,4 +73,24 @@ auto random_text(size_t len, CharT const* from =
 	    });
 
 	return to;
+}
+
+template <typename Rng, typename T, typename Ratio = std::ratio<1, 2>>
+inline
+void maybe_replace(Rng& rng, T const& v, Ratio ro = {})
+{
+	using std::begin;
+	using std::end;
+
+	auto do_replace = [&]
+	{
+		auto it = std::next(begin(rng),
+		    randint<size_t>(0, rng.size() - 1));
+		*it = v;
+	};
+
+	for (auto i = 0; i < ro.num / ro.den; ++i)
+		do_replace();
+	if (randint<intmax_t>(1, ro.den) <= ro.num % ro.den)
+		do_replace();
 }

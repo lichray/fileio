@@ -1086,7 +1086,7 @@ namespace Matchers {
             virtual ~EndsWith();
 
             virtual bool match( std::string const& expr ) const {
-                return m_data.adjustString( expr ).find( m_data.m_str ) == expr.size() - m_data.m_str.size();
+                return m_data.adjustString( expr ).rfind( m_data.m_str ) == expr.size() - m_data.m_str.size();
             }
             virtual std::string toString() const {
                 return "ends with: \"" + m_data.m_str + "\"" + m_data.toStringSuffix();

@@ -33,6 +33,7 @@
 #include <ciso646>
 #include <limits.h>
 
+using std::next;
 using std::distance;
 
 namespace stdex
@@ -53,6 +54,20 @@ int my_wcsnrtombs(char* buf, wchar_t const* s, size_t& nwc, size_t blen,
 {
 	auto p = buf;
 	auto n = nwc;
+
+#if !defined(_WIN32)
+	auto bg = s;
+	auto len = wcsnrtombs(p, &s, n, blen, &mbs);
+
+	if (len == (size_t)-1)
+		return -1;
+
+	p += len;
+	blen -= len;
+	if (s == nullptr)  // restore it
+		s = std::find(bg, next(bg, nwc), '\0');
+	n -= distance(bg, s);
+#endif
 
 	while (n != 0 and blen >= cm::mb_len)
 	{
