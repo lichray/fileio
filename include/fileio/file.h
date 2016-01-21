@@ -343,7 +343,7 @@ public:
 		return r;
 	}
 
-	io_result put(char c)
+	io_result write(char c)
 	{
 		assert(opened());
 		auto _ = make_guard();
@@ -427,7 +427,7 @@ public:
 		return write_nolock(buf, sz, ec);
 	}
 
-	io_result put(char c, error_code& ec)
+	io_result write(char c, error_code& ec)
 	{
 		assert(opened());
 		auto _ = make_guard();
@@ -501,7 +501,7 @@ public:
 
 	void print(char c, error_code& ec)
 	{
-		put(c, ec);
+		write(c, ec);
 	}
 
 	void print(wchar_t c, error_code& ec)

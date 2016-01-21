@@ -48,7 +48,7 @@ TEST_CASE("file is not opened for write")
 	SECTION("attempt to put a byte is also an error")
 	{
 		std::error_code ec;
-		r = fh.put('x', ec);
+		r = fh.write('x', ec);
 
 		REQUIRE_FALSE(r);
 		REQUIRE(r.count() == 0);
@@ -73,7 +73,7 @@ TEST_CASE("file is unbuffered")
 	REQUIRE(s == s1);
 	REQUIRE(errno == 0);
 
-	r = fh.put('!');
+	r = fh.write('!');
 
 	REQUIRE(r);
 	REQUIRE(r.count() == 1);
@@ -128,7 +128,7 @@ TEST_CASE("file is fully buffered")
 		file::io_result r;
 
 		for (auto c : s1)
-			fh.put(c);
+			fh.write(c);
 
 		REQUIRE(s == s1.substr(0, 12));
 
@@ -190,7 +190,7 @@ TEST_CASE("file is line buffered")
 			REQUIRE(s == s3 + s4.substr(0, s4.find('\n') + 1));
 
 			for (auto c : s5)
-				fh.put(c);
+				fh.write(c);
 
 			REQUIRE(s == s3 + s4 + s5);
 		}
@@ -198,9 +198,9 @@ TEST_CASE("file is line buffered")
 		SECTION("put across NL, then write")
 		{
 			for (auto c : s3)
-				fh.put(c);
+				fh.write(c);
 			for (auto c : s4)
-				fh.put(c);
+				fh.write(c);
 
 			REQUIRE(s == s3 + s4.substr(0, s4.find('\n') + 1));
 

@@ -138,7 +138,7 @@ TEST_CASE("printing strings")
 
 			if (len % 2)
 				for (auto c : s1)
-					fh.put(c);
+					fh.print(c);
 			else
 				fh.print(s1);
 		}
@@ -174,7 +174,7 @@ TEST_CASE("printing strings")
 
 			if (len % 2)
 				for (auto c : s1)
-					fh.put(c);
+					fh.print(c);
 			else
 				fh.print(s1);
 
