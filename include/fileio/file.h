@@ -193,34 +193,25 @@ private:
 
 public:
 	file() noexcept :
-		file(allocator_arg, nullptr)
+		file(allocator_arg, pmr::get_default_resource())
 	{}
 
-	file(allocator_arg_t, nullptr_t) noexcept :
-		mr_p_(pmr::get_default_resource())
-	{}
-
-	file(allocator_arg_t, pmr::memory_resource* p) noexcept :
-		mr_p_(p)
+	file(allocator_arg_t, pmr::memory_resource* mrp) noexcept :
+		mr_p_(mrp)
 	{}
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
-	file(T&& t, _unspecified_ flags) :
-		file(allocator_arg, nullptr, std::forward<T>(t), flags)
+	file(T&& t, _unspecified_ flags, int bufsize = 0) :
+		file(allocator_arg, pmr::get_default_resource(),
+		    std::forward<T>(t), flags, bufsize)
 	{}
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
-	file(T&& t, _unspecified_ flags, int bufsize) :
-		file(allocator_arg, nullptr, std::forward<T>(t), flags, bufsize)
-	{}
-
-	template <typename T, typename Alloc, typename =
-	    If<either<is_readable, is_writable>::call<T>>>
-	file(allocator_arg_t, Alloc const& alloc, T&& t, _unspecified_ flags,
-	    int bufsize = 0) :
-		file(allocator_arg, alloc)
+	file(allocator_arg_t, pmr::memory_resource* mrp, T&& t,
+	    _unspecified_ flags, int bufsize = 0) :
+		file(allocator_arg, mrp)
 	{
 		static_assert(std::is_same<decltype(get_fd(t)), int>(),
 		    "fd() must return int if presents");
