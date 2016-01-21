@@ -41,14 +41,14 @@ namespace stdex
 
 using cm = charmap<wchar_t>;
 
-inline
+static
 bool my_wcrtomb(char* buf, wchar_t c, mbstate_t& mbs, size_t& len)
 {
 	len = wcrtomb(buf, c, &mbs);
 	return len != (size_t)-1;
 }
 
-inline
+static
 int my_wcsnrtombs(char* buf, wchar_t const* s, size_t& nwc, size_t blen,
     mbstate_t& mbs)
 {

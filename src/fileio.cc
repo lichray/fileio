@@ -64,7 +64,7 @@ private:
 static std_streams_resource __a;
 
 template <typename Flags>
-inline
+static
 file make_std_stream(int fd, Flags mode, FILE* target)
 {
 	file fh(allocator_arg, &__a, file_stream(fd), mode);
