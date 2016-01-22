@@ -132,6 +132,69 @@ private:
 	native_handle_type fd_;
 };
 
+template <typename CharT>
+file allocate_file(pmr::memory_resource* mrp, CharT const* path,
+    char const* mode, error_code& ec);
+
+template <typename CharT>
+inline
+file allocate_file(pmr::memory_resource* mrp, CharT const* path,
+    char const* mode)
+{
+	error_code ec;
+	auto fh = allocate_file(mrp, path, mode, ec);
+	if (ec) throw std::system_error(ec);
+
+	return fh;
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+inline
+file allocate_file(pmr::memory_resource* mrp,
+    std::basic_string<CharT, Traits, Alloc> const& path, char const* mode,
+    error_code& ec)
+{
+	return allocate_file(mrp, path.data(), mode, ec);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+inline
+file allocate_file(pmr::memory_resource* mrp,
+    std::basic_string<CharT, Traits, Alloc> const& path, char const* mode)
+{
+	return allocate_file(mrp, path.data(), mode);
+}
+
+template <typename CharT>
+inline
+file open_file(CharT const* path, char const* mode, error_code& ec)
+{
+	return allocate_file(pmr::get_default_resource(), path, mode, ec);
+}
+
+template <typename CharT>
+inline
+file open_file(CharT const* path, char const* mode)
+{
+	return allocate_file(pmr::get_default_resource(), path, mode);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+inline
+file open_file(std::basic_string<CharT, Traits, Alloc> const& path,
+    char const* mode, error_code& ec)
+{
+	return open_file(path.data(), mode, ec);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+inline
+file open_file(std::basic_string<CharT, Traits, Alloc> const& path,
+    char const* mode)
+{
+	return open_file(path.data(), mode);
+}
+
 #undef _read
 #undef _write
 #undef _close

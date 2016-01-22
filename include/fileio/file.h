@@ -202,15 +202,15 @@ public:
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
-	file(T&& t, _unspecified_ flags, int bufsize = 0) :
+	file(T&& t, _unspecified_ opts, int bufsize = 0) :
 		file(allocator_arg, pmr::get_default_resource(),
-		    std::forward<T>(t), flags, bufsize)
+		    std::forward<T>(t), opts, bufsize)
 	{}
 
 	template <typename T, typename =
 	    If<either<is_readable, is_writable>::call<T>>>
 	file(allocator_arg_t, pmr::memory_resource* mrp, T&& t,
-	    _unspecified_ flags, int bufsize = 0) :
+	    _unspecified_ opts, int bufsize = 0) :
 		file(allocator_arg, mrp)
 	{
 		static_assert(std::is_same<decltype(get_fd(t)), int>(),
@@ -223,7 +223,7 @@ public:
 		fp_.reset(p);
 		assert(opened());
 
-		flags_ = decltype(flags_)(flags);
+		flags_ = decltype(flags_)(opts);
 		if (!is_readable<T>())
 			make_it_not(for_read);
 		if (!is_writable<T>())

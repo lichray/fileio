@@ -75,6 +75,20 @@ auto random_text(size_t len, CharT const* from =
 	return to;
 }
 
+inline
+auto random_filename(char const* prefix)
+{
+	return prefix + random_text(7,
+	    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+}
+
+// Windows, lowercase only
+inline
+auto random_filename(wchar_t const* prefix)
+{
+	return prefix + random_text(7, L"abcdefghijklmnopqrstuvwxyz");
+}
+
 template <typename Rng, typename T, typename Ratio = std::ratio<1, 2>>
 inline
 void maybe_replace(Rng& rng, T const& v, Ratio ro = {})
