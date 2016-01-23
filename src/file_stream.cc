@@ -94,9 +94,6 @@ file allocate_file(pmr::memory_resource* mrp,
 {
 	int opts = int(opening::buffered);
 	int flag = 0;
-#if defined(_WIN32)
-	bool force_text_mode = false;
-#endif
 
 	switch (*mode++)
 	{
@@ -126,13 +123,6 @@ file allocate_file(pmr::memory_resource* mrp,
 		opts |= int(opening::binary);
 		++mode;
 	}
-#if defined(_WIN32)
-	else if (*mode == 't')
-	{
-		force_text_mode = true;
-		++mode;
-	}
-#endif
 
 	if (*mode == '+')
 	{
@@ -145,8 +135,7 @@ file allocate_file(pmr::memory_resource* mrp,
 	{
 		if (*mode == ',')
 		{
-			++mode;
-			while (*mode++ != ' ');
+			while (*++mode == ' ');
 			if (strncmp(mode, "ccs=", 4) != 0)
 				goto invalid_mode;
 			advance(mode, 4);
@@ -156,17 +145,14 @@ file allocate_file(pmr::memory_resource* mrp,
 				flag |= _O_U8TEXT;
 			else if (_stricmp(mode, "utf-16le") == 0)
 				flag |= _O_U16TEXT;
+			else if (_stricmp(mode, "ansi") == 0)
+				flag |= _O_TEXT;
 			else
 				goto invalid_mode;
 		}
-		else
-		{
-			if (*mode != '\0')
-				goto invalid_mode;
-			if (force_text_mode)
-				flag |= _O_TEXT;
-			// otherwise, global default _fmode
-		}
+		else if (*mode != '\0')
+			goto invalid_mode;
+		// otherwise, global default _fmode
 	}
 	else
 #endif
