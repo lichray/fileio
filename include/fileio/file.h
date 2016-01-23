@@ -871,7 +871,7 @@ private:
 	int w_ = 0;
 	char* p_ = nullptr;
 	int blen_;
-	_ifflags<opening>::int_type flags_;
+	_ifflags<opening>::int_type flags_{};
 	int fd_copy_;
 	pmr::memory_resource* mr_p_;
 	mbstate_t mbs_{};
