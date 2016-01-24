@@ -138,10 +138,13 @@ file::io_result file::put_nolock(char c, error_code& ec)
 	else
 		ok = swrite(&c, 1);
 
-	if (not ok)
+	if (ok)
+		return { true, 1 };
+	else
+	{
 		report_error(ec, errno);
-
-	return { true, 1 };
+		return {};
+	}
 }
 
 void file::setup_buffer()

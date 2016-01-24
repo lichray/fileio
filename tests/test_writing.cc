@@ -21,6 +21,23 @@ struct test_writer
 	std::string& s;
 };
 
+// a writer which gives error on the second write
+struct half_faulty_writer
+{
+	int write(char const* p, int sz)
+	{
+		if (times)
+			return -1;
+		else
+		{
+			++times;
+			return (sz + 1) / 2;
+		}
+	}
+
+	int times = 0;
+};
+
 TEST_CASE("file is not opened for write")
 {
 	std::string s;
@@ -272,5 +289,38 @@ TEST_CASE("moving and swapping")
 
 		REQUIRE(s == s1);
 		REQUIRE_FALSE(fh.writable());
+	}
+}
+
+TEST_CASE("error reporting")
+{
+	errno = 0;
+	std::string s1 = "Wonderful Rush";
+
+	SECTION("unbuffered ranged write")
+	{
+		file fh(half_faulty_writer{}, opening::for_write);
+		file::io_result r;
+
+		r = fh.write(s1.data(), s1.size());
+
+		REQUIRE_FALSE(r);
+		REQUIRE(r.count() == s1.size() / 2);
+	}
+
+	SECTION("unbuffered byte-wise write")
+	{
+		file fh(half_faulty_writer{}, opening::for_write);
+		file::io_result r;
+
+		r = fh.write(s1[0]);
+
+		REQUIRE(r);
+		REQUIRE(r.count() == 1);
+
+		r = fh.write(s1[1]);
+
+		REQUIRE_FALSE(r);
+		REQUIRE(r.count() == 0);
 	}
 }
