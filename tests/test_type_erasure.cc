@@ -12,9 +12,9 @@ TEST_CASE("is_readable and is_seekable")
 {
 	struct fake_reader
 	{
-		int read(char*, unsigned int)
+		int read(char*, unsigned int x)
 		{
-			return 0;
+			return x;
 		}
 
 		int seek(int x, whence)
@@ -29,8 +29,8 @@ TEST_CASE("is_readable and is_seekable")
 
 	REQUIRE(fh.readable());
 	REQUIRE_FALSE(fh.writable());
-	REQUIRE_FALSE(r);
-	REQUIRE(r.count() == 0);
+	REQUIRE(r);
+	REQUIRE(r.count() == buf.size());
 
 	auto x = fh.seek(3, whence::beginning);
 

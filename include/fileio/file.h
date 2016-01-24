@@ -316,6 +316,21 @@ public:
 		return it_is_not(for_read | for_write);
 	}
 
+	io_result read(char& c)
+	{
+		assert(opened());
+		auto _ = make_guard();
+
+		if (auto r = get_fasttrack(c))
+			return r;
+
+		error_code ec;
+		auto r = get_nolock(c, ec);
+		if (ec) throw std::system_error(ec);
+
+		return r;
+	}
+
 	io_result read(char* buf, size_t sz)
 	{
 		error_code ec;
@@ -398,17 +413,22 @@ public:
 		if (ec) throw std::system_error(ec);
 	}
 
+	io_result read(char& c, error_code& ec)
+	{
+		assert(opened());
+		auto _ = make_guard();
+
+		if (auto r = get_fasttrack(c))
+			return r;
+
+		return get_nolock(c, ec);
+	}
+
 	io_result read(char* buf, size_t sz, error_code& ec)
 	{
-		auto n = fp_->read(buf, int(sz));
-
-		if (n == -1)
-		{
-			ec.assign(errno, std::system_category());
-			return {};
-		}
-
-		return { size_t(n) == sz, size_t(n) };
+		assert(opened());
+		auto _ = make_guard();
+		return read_nolock(buf, sz, ec);
 	}
 
 	io_result write(char const* buf, size_t sz, error_code& ec)
@@ -725,6 +745,25 @@ private:
 		return blen_ - buffer_use();
 	}
 
+	bool prepare_to_read()
+	{
+		if (it_is(writing))
+		{
+			if (!sflush())
+				return false;
+
+			make_it_not(writing);
+			p_ = bp_.get();
+			w_ = 0;
+		}
+		make_it(reading);
+
+		if (bp_ == nullptr)
+			setup_buffer();
+
+		return true;
+	}
+
 	void prepare_to_write()
 	{
 		if (it_is(reading))
@@ -759,6 +798,13 @@ private:
 #endif
 
 	void setup_buffer();
+
+	void copy_buffer_to(char* p, size_t sz)
+	{
+		assert(sz <= size_t(r_));
+		memmove(p, p_, sz);
+		p_ += sz;
+	}
 
 	void copy_to_buffer(char const* p, size_t sz, size_t& written)
 	{
@@ -800,11 +846,44 @@ private:
 	bool xswritew(char* buf, size_t blen, char*& bp, wchar_t const* p,
 	    size_t sz);
 
+	bool srefill()
+	{
+		p_ = bp_.get();
+		r_ = 0;
+
+		if (it_is(reached_eof))
+			return false;
+
+		switch (auto r = fp_->read(p_, blen_))
+		{
+		case 0:
+			make_it(reached_eof);
+		case -1:
+			return false;
+		default:
+			r_ = r;
+			return true;
+		}
+	}
+
+	io_result read_nolock(char* buf, size_t sz, error_code& ec);
 	io_result write_nolock(char const* buf, size_t sz, error_code& ec);
+	io_result get_nolock(char& c, error_code& ec);
 	io_result put_nolock(char c, error_code& ec);
 
 	void print_nolock(wchar_t const* s, size_t sz, error_code& ec);
 	void print_nolock(wchar_t c, error_code& ec);
+
+	io_result get_fasttrack(char& c)
+	{
+		if (--r_ >= 0)
+		{
+			c = *p_++;
+			return { true, 1 };
+		}
+
+		return {};
+	}
 
 	io_result put_fasttrack(char c)
 	{

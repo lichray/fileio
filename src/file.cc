@@ -56,6 +56,43 @@ namespace stdex
 
 using cm = charmap<char>;
 
+file::io_result file::read_nolock(char* buf, size_t sz, error_code& ec)
+{
+	if (sz == 0)
+		return { true, 0 };
+
+	if (it_is_not(for_read))
+	{
+		report_error(ec, EBADF);
+		return {};
+	}
+
+	bool ok = prepare_to_read();
+	size_t remaining = sz;
+	size_t r;
+
+	while (ok and remaining > (r = r_))
+	{
+		copy_buffer_to(buf, r);
+		buf += r;
+		remaining -= r;
+		ok = srefill();
+	}
+
+	if (ok)
+	{
+		copy_buffer_to(buf, remaining);
+		r_ -= int(remaining);
+		return { ok, sz };
+	}
+	else
+	{
+		if (it_is_not(reached_eof))
+			report_error(ec, errno);
+		return { ok, sz - remaining };
+	}
+}
+
 file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 {
 	if (sz == 0)
@@ -110,6 +147,30 @@ file::io_result file::write_nolock(char const* buf, size_t sz, error_code& ec)
 		report_error(ec, errno);
 
 	return { ok, written };
+}
+
+file::io_result file::get_nolock(char& c, error_code& ec)
+{
+	if (it_is_not(for_read))
+	{
+		report_error(ec, EBADF);
+		return {};
+	}
+
+	bool ok = prepare_to_read();
+
+	if (ok and srefill())
+	{
+		--r_;
+		c = *p_++;
+		return { true, 1 };
+	}
+	else
+	{
+		if (it_is_not(reached_eof))
+			report_error(ec, errno);
+		return {};
+	}
 }
 
 file::io_result file::put_nolock(char c, error_code& ec)
