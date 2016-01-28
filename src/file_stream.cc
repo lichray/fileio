@@ -118,16 +118,23 @@ file allocate_file(pmr::memory_resource* mrp,
 		return {};
 	}
 
-	if (*mode == 'b')
+	if ((mode[0] == 'b' and mode[1] == '+') or
+	    (mode[0] == '+' and mode[1] == 'b'))
 	{
+		opts |= int(opening::for_write | opening::for_read |
+		    opening::binary);
+		mode += 2;
+	}
+	else switch (*mode)
+	{
+	case 'b':
 		opts |= int(opening::binary);
 		++mode;
-	}
-
-	if (*mode == '+')
-	{
+		break;
+	case '+':
 		opts |= int(opening::for_write | opening::for_read);
 		++mode;
+		break;
 	}
 
 #if defined(_WIN32)

@@ -47,7 +47,7 @@ TEST_CASE("open local files")
 	}
 
 	::remove(fn.data());
-	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+"), ENOENT);
+	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+b"), ENOENT);
 
 	// "a" can also create file
 	{
@@ -97,7 +97,7 @@ TEST_CASE("open local files")
 
 	// write and read from itself
 	{
-		REQUIRE_SYSTEM_ERROR(open_file(fn, "x+"), EEXIST);
+		REQUIRE_SYSTEM_ERROR(open_file(fn, "xb+"), EEXIST);
 
 		::remove(fn.data());
 		auto f = open_file(fn, "x+");
@@ -122,10 +122,14 @@ TEST_CASE("invalid mode strings")
 	    " r",
 	    "rw",
 	    "wx",
-	    "r+b",
 	    "rb ",
-	    "rt",
-	    "r+," })
+	    "rbb",
+	    "r++",
+	    "r+b+",
+	    "r+bb",
+	    "rb+b",
+	    "rb++",
+	    "rt" })
 		REQUIRE_SYSTEM_ERROR(open_file(fn, md), EINVAL);
 }
 
