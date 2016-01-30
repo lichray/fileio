@@ -244,6 +244,7 @@ void file::setup_buffer()
 		}
 	}
 #endif
+	assert(blen_ % buffer_alignment == 0);
 	bp_.reset((char*)mr_p_->allocate(blen_, buffer_alignment));
 	p_ = bp_.get();
 	w_ = blen_;

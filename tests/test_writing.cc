@@ -131,7 +131,7 @@ TEST_CASE("file is fully buffered")
 
 		REQUIRE(r);
 		REQUIRE(r.count() == s2.size());
-		REQUIRE(s == (s1 + s2).substr(0, 21));
+		REQUIRE(s == (s1 + s2).substr(0, 22));
 
 		fh.close();
 		REQUIRE(s == s1 + s2);

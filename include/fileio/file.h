@@ -33,11 +33,11 @@
 
 #include <memory>
 #include <system_error>
-#include <locale>
 #include <string>
 #include <experimental/string_view>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 #include <assert.h>
 
 #if !defined(_WIN32)
@@ -232,7 +232,7 @@ public:
 			make_it_not(append_mode);
 		if (bufsize != 0 and not buffering())
 			make_it(buffered);
-		blen_ = bufsize;
+		blen_ = rounded_for_buffer(bufsize);
 	}
 
 	file(file&&) noexcept = default;
@@ -785,12 +785,15 @@ private:
 	}
 
 	static constexpr int default_buffer_size = 8192;
-	static constexpr auto buffer_alignment =
-#if !defined(_WIN32)
-	    alignof(char);
-#else
-	    alignof(wchar_t);
+	static constexpr auto buffer_alignment = alignof(char16_t);
 
+	static int rounded_for_buffer(int blen)
+	{
+		auto x = int(buffer_alignment);
+		return (blen + (x - 1)) / x * x;
+	}
+
+#if defined(_WIN32)
 	bool bypass_wchar_conversion() const
 	{
 		return it_is_not(binary) && fileno() != -1;
