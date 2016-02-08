@@ -454,7 +454,7 @@ public:
 		auto off = fp_->seek(offset, where);
 
 		if (off == -1)
-			ec.assign(errno, std::system_category());
+			ec.assign(errno, std::generic_category());
 
 		return off;
 	}
@@ -474,7 +474,7 @@ public:
 		auto r = fp_->resize(len);
 
 		if (r == -1)
-			ec.assign(errno, std::system_category());
+			ec.assign(errno, std::generic_category());
 	}
 
 	void truncate(error_code& ec)
@@ -712,7 +712,7 @@ private:
 
 	static void report_error(error_code& ec, int eno)
 	{
-		ec.assign(eno, std::system_category());
+		ec.assign(eno, std::generic_category());
 	}
 
 	bool opened() const noexcept

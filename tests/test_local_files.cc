@@ -13,7 +13,8 @@ TEST_CASE("open local files")
 {
 	auto fn = random_filename("fileio_t_");
 
-	REQUIRE_SYSTEM_ERROR(open_file(fn, "r"), ENOENT);
+	REQUIRE_SYSTEM_ERROR(open_file(fn, "r"),
+	    std::errc::no_such_file_or_directory);
 
 	// create a file with some content
 	{
@@ -47,7 +48,8 @@ TEST_CASE("open local files")
 	}
 
 	::remove(fn.data());
-	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+b"), ENOENT);
+	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+b"),
+	    std::errc::no_such_file_or_directory);
 
 	// "a" can also create file
 	{
@@ -84,7 +86,8 @@ TEST_CASE("open local files")
 
 	// exclusive creation
 	{
-		REQUIRE_SYSTEM_ERROR(open_file(fn, "x"), EEXIST);
+		REQUIRE_SYSTEM_ERROR(open_file(fn, "x"),
+		    std::errc::file_exists);
 
 		::remove(fn.data());
 		auto f = open_file(fn, "x");
@@ -97,7 +100,8 @@ TEST_CASE("open local files")
 
 	// write and read from itself
 	{
-		REQUIRE_SYSTEM_ERROR(open_file(fn, "xb+"), EEXIST);
+		REQUIRE_SYSTEM_ERROR(open_file(fn, "xb+"),
+		    std::errc::file_exists);
 
 		::remove(fn.data());
 		auto f = open_file(fn, "x+");
@@ -130,7 +134,8 @@ TEST_CASE("invalid mode strings")
 	    "rb+b",
 	    "rb++",
 	    "rt" })
-		REQUIRE_SYSTEM_ERROR(open_file(fn, md), EINVAL);
+		REQUIRE_SYSTEM_ERROR(open_file(fn, md),
+		    std::errc::invalid_argument);
 }
 
 #if defined(_WIN32)
@@ -150,7 +155,8 @@ TEST_CASE("Windows-only features")
 		f.print(s);
 
 		// files are not shared
-		REQUIRE_SYSTEM_ERROR(open_file(fn, "r,ccs=UNICODE"), EACCES);
+		REQUIRE_SYSTEM_ERROR(open_file(fn, "r,ccs=UNICODE"),
+		    std::errc::permission_denied);
 
 		f.close();
 		// now we can read it back with any Unicode mode
@@ -163,7 +169,8 @@ TEST_CASE("Windows-only features")
 	}
 
 	_wremove(fn.data());
-	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+,  ccs=ANSI"), ENOENT);
+	REQUIRE_SYSTEM_ERROR(open_file(fn, "r+,  ccs=ANSI"),
+	    std::errc::no_such_file_or_directory);
 
 	SECTION("invalid modes")
 	{
@@ -174,7 +181,8 @@ TEST_CASE("Windows-only features")
 		    "w, ccs=utf-8 ",
 		    "w, ccs=what",
 		    "w, ansi" })
-			REQUIRE_SYSTEM_ERROR(open_file(fn, md), EINVAL);
+			REQUIRE_SYSTEM_ERROR(open_file(fn, md),
+			    std::errc::invalid_argument);
 	}
 }
 #endif

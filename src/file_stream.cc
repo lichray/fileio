@@ -85,7 +85,7 @@ namespace stdex
 static
 void report_error(error_code& ec, int eno)
 {
-	ec.assign(eno, std::system_category());
+	ec.assign(eno, std::generic_category());
 }
 
 template <typename CharT>

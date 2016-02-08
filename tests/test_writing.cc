@@ -58,8 +58,7 @@ TEST_CASE("file is not opened for write")
 
 		REQUIRE_FALSE(r);
 		REQUIRE(r.count() == 0);
-		REQUIRE(ec.value() == EBADF);
-		REQUIRE(ec.category() == std::system_category());
+		REQUIRE(ec == std::errc::bad_file_descriptor);
 	}
 
 	SECTION("attempt to put a byte is also an error")
@@ -69,8 +68,7 @@ TEST_CASE("file is not opened for write")
 
 		REQUIRE_FALSE(r);
 		REQUIRE(r.count() == 0);
-		REQUIRE(ec.value() == EBADF);
-		REQUIRE(ec.category() == std::system_category());
+		REQUIRE(ec == std::errc::bad_file_descriptor);
 	}
 }
 

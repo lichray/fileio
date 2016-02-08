@@ -33,8 +33,7 @@ TEST_CASE("file is not opened for write")
 		std::error_code ec;
 		fh.print("x", ec);
 
-		REQUIRE(ec.value() == EBADF);
-		REQUIRE(ec.category() == std::system_category());
+		REQUIRE(ec == std::errc::bad_file_descriptor);
 	}
 
 	SECTION("attempt to print a character is also an error")
@@ -42,10 +41,10 @@ TEST_CASE("file is not opened for write")
 		std::error_code ec;
 		fh.print('x', ec);
 
-		REQUIRE(ec.value() == EBADF);
-		REQUIRE(ec.category() == std::system_category());
+		REQUIRE(ec == std::errc::bad_file_descriptor);
 
-		REQUIRE_SYSTEM_ERROR(fh.print('a'), EBADF);
+		REQUIRE_SYSTEM_ERROR(fh.print('a'),
+		    std::errc::bad_file_descriptor);
 	}
 }
 

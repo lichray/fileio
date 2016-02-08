@@ -10198,7 +10198,7 @@ int main (int argc, char * const argv[]) {
 using Catch::Detail::Approx;
 
 // local extension
-#define REQUIRE_SYSTEM_ERROR(expr, eno)                                     \
+#define REQUIRE_SYSTEM_ERROR(expr, ev)                                      \
 	do                                                                  \
 	{                                                                   \
 		Catch::ResultBuilder __catchResult(                         \
@@ -10215,9 +10215,7 @@ using Catch::Detail::Approx;
 			{                                                   \
 				__catchResult.captureResult(                \
 				    Catch::ResultWas::Ok);                  \
-				REQUIRE(ex.code().value() == eno);          \
-				REQUIRE(ex.code().category() ==             \
-				        std::system_category());            \
+				REQUIRE(ex.code() == ev);                   \
 			}                                                   \
 			catch (...)                                         \
 			{                                                   \

@@ -101,18 +101,21 @@ TEST_CASE("error handling")
 	REQUIRE(fh.readable());
 	REQUIRE(fh.writable());
 
-	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()), EBUSY);
-	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()), EPERM);
-	REQUIRE_SYSTEM_ERROR(fh.rewind(), ENOTSUP);
-	REQUIRE_SYSTEM_ERROR(fh.resize(0), ERANGE);
-	REQUIRE_SYSTEM_ERROR(fh.truncate(), ENOTSUP);
+	REQUIRE_SYSTEM_ERROR(fh.read(buf.data(), buf.size()),
+	    std::errc::device_or_resource_busy);
+	REQUIRE_SYSTEM_ERROR(fh.write(buf.data(), buf.size()),
+	    std::errc::operation_not_permitted);
+	REQUIRE_SYSTEM_ERROR(fh.rewind(), std::errc::not_supported);
+	REQUIRE_SYSTEM_ERROR(fh.resize(0), std::errc::result_out_of_range);
+	REQUIRE_SYSTEM_ERROR(fh.truncate(), std::errc::not_supported);
 	REQUIRE_FALSE(fh.closed());
-	REQUIRE_SYSTEM_ERROR(fh.close(), EAGAIN);
+	REQUIRE_SYSTEM_ERROR(fh.close(),
+	    std::errc::resource_unavailable_try_again);
 	REQUIRE(fh.closed());
 
 	// truncate is tell + resize, stops at the first error
-	std::error_code ec(EBUSY, std::system_category());
+	auto ec = make_error_code(std::errc::device_or_resource_busy);
 	fh.truncate(ec);
 
-	REQUIRE(ec.value() == ENOTSUP);
+	REQUIRE(ec == std::errc::not_supported);
 }
