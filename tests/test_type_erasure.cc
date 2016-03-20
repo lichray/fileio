@@ -1,4 +1,5 @@
 #include <fileio.h>
+#include <fileio/functional.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -118,4 +119,92 @@ TEST_CASE("error handling")
 	fh.truncate(ec);
 
 	REQUIRE(ec == std::errc::not_supported);
+}
+
+using stdex::signature;
+
+void do_f1(signature<void(char const*)> f)
+{
+	auto f2 = f;
+	f = std::move(f2);
+	f("");
+}
+
+void do_f1(signature<void(int*)> f)
+{
+	f(nullptr);
+}
+
+enum be_called
+{
+	no_qs, const_qs, rvref_qs,
+};
+
+struct F2
+{
+	int operator()() &
+	{
+		return no_qs;
+	}
+
+	int operator()() const &
+	{
+		return const_qs;
+	}
+
+	int operator()() &&
+	{
+		return rvref_qs;
+	}
+
+	int operator()() const &&
+	{
+		return const_qs | rvref_qs;
+	}
+};
+
+auto do_f2(signature<int()> f)
+{
+	return f();
+}
+
+struct F3
+{
+	F3 next()
+	{
+		return { char(c + 1) };
+	}
+
+	char c;
+};
+
+auto do_f3(signature<F3(F3)> f, F3 obj)
+{
+	return f(obj);
+};
+
+auto do_f3(signature<char(F3)> f, F3 obj)
+{
+	return f(obj);
+};
+
+TEST_CASE("signature")
+{
+	// overloading and void-discarding
+	do_f1([](char const*) { return 3; });
+
+	// forwarding
+	F2 f2;
+	F2 const f2c;
+
+	REQUIRE(do_f2(f2) == no_qs);
+	REQUIRE(do_f2(f2c) == const_qs);
+	REQUIRE(do_f2(F2()) == rvref_qs);
+	REQUIRE(do_f2((F2 const)f2) == (const_qs | rvref_qs));
+
+	// more overloading plus INVOKE support
+	F3 f3 = { 'a' };
+
+	REQUIRE(do_f3(&F3::c, f3) == 'a');
+	REQUIRE(do_f3(&F3::next, f3).c == 'b');
 }
